@@ -3,7 +3,7 @@ stages: [test, build]
 
 test:
   stage: test
-  image: golang:1.24
+  image: golang:1.27
   script:
     - test -z "$(gofmt -l .)"
     - go vet ./...
@@ -11,7 +11,7 @@ test:
 
 build:
   stage: build
-  image: golang:1.24
+  image: golang:1.27
   rules:
     - if: $CI_COMMIT_TAG
   script:
