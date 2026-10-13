@@ -158,6 +158,9 @@ func (s *serveConn) snapshot() (*Snapshot, error) {
 	if err := s.call("GET", "/list/object/collections", nil, &snap.Collections); err != nil {
 		return nil, err
 	}
+	if err := s.call("GET", "/list/object/folders", nil, &snap.Folders); err != nil {
+		return nil, err
+	}
 	return snap, nil
 }
 

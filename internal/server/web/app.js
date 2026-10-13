@@ -34,6 +34,7 @@ const app = {
   match: "host",
   filter: "all",
   reveal: {},          // id -> {state: "loading"|"shown", value, timer}
+  details: {},         // id -> {open, state: "loading"|"ok"|"error", data, error}
   save: { timer: null, state: "saved", error: null },
   ended: false,
 };
@@ -181,6 +182,50 @@ async function reveal(id, card) {
     app.reveal[id] = { state: "shown", value: "⚠ " + e.message, timer: setTimeout(() => { delete app.reveal[id]; rerenderCard(card); }, 8000) };
   }
   rerenderCard(card);
+}
+
+async function toggleDetails(id, card) {
+  const d = app.details[id];
+  if (d && d.open) { d.open = false; rerenderCard(card); return; }
+  if (d && d.state === "ok") { d.open = true; rerenderCard(card); return; }
+  app.details[id] = { open: true, state: "loading" };
+  rerenderCard(card);
+  try {
+    app.details[id] = { open: true, state: "ok", data: await api("GET", "/api/details?id=" + encodeURIComponent(id)) };
+  } catch (e) {
+    app.details[id] = { open: true, state: "error", error: e.message };
+  }
+  rerenderCard(card);
+}
+
+function fmtDate(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+const MATCH = { 0: "match_domain", 1: "match_host_rule", 2: "match_starts", 3: "match_exact", 4: "match_regex", 5: "match_never" };
+
+function detailsHTML(d) {
+  if (d.state === "loading") return `<span class="muted"><span class="spinner" style="width:11px;height:11px"></span> ${esc(t("loading"))}</span>`;
+  if (d.state === "error") return `<span class="err">${esc(d.error)}</span>`;
+  const x = d.data;
+  const row = (k, v) => v ? `<div class="dk">${esc(t(k))}</div><div class="dv">${v}</div>` : "";
+  const flags = [x.totp && "TOTP", x.passkey && "Passkey", x.favorite && t("feat_favorite"), x.reprompt && t("reprompt")].filter(Boolean);
+  return `<div class="details">
+    ${row("d_username", esc(x.username || "-"))}
+    ${row("d_uris", x.uris.length ? x.uris.map((u) => `<div>${esc(u.uri)} <span class="muted">· ${esc(t(MATCH[u.match] || "match_default"))}</span></div>`).join("") : "-")}
+    ${row("d_created", x.created ? esc(fmtDate(x.created)) : "")}
+    ${row("d_revised", x.revised ? esc(fmtDate(x.revised)) : "")}
+    ${row("d_pw_revised", x.passwordRevised ? esc(fmtDate(x.passwordRevised)) : "")}
+    ${row("d_history", x.history.length ? esc(x.history.map(fmtDate).join(" · ")) : "")}
+    ${row("d_fields", x.fields.length ? x.fields.map((f) => `<div>${esc(f.name)}: ${f.hidden ? `<span class="muted">${esc(t("hidden"))}</span>` : esc(f.value)}</div>`).join("") : "")}
+    ${row("d_attachments", x.attachments.length ? x.attachments.map((a) => `<div>${esc(a.name)} <span class="muted">${esc(a.size || "")}</span></div>`).join("") : "")}
+    ${row("d_flags", flags.length ? esc(flags.join(" · ")) : "")}
+    ${row("d_notes", x.notes ? `<div class="note">${esc(x.notes)}</div>` : "")}
+  </div>`;
 }
 
 async function quit() {
@@ -418,6 +463,7 @@ function fillCard(el, g) {
   for (const b of blocked) tags.push(`<span class="tag err">${esc(b)}</span>`);
   const rows = g.entries.map((e) => {
     const r = app.reveal[e.id];
+    const d = app.details[e.id];
     const revealBtn = e.pw === "-" ? "" : r && r.state === "loading"
       ? `<button class="link" disabled><span class="spinner" style="width:11px;height:11px"></span> ${esc(t("loading"))}</button>`
       : `<button class="link" data-reveal="${esc(e.id)}">${esc(r ? t("hide") : t("reveal"))}</button>`;
@@ -426,13 +472,15 @@ function fillCard(el, g) {
       <td><input type="radio" name="k${g.no}" data-keeper="${esc(e.id)}" ${g.keeper === e.id ? "checked" : ""} ${e.include ? "" : "disabled"}></td>
       <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${esc(e.pw)}</label>${revealBtn}</div>
         ${r && r.state === "shown" ? `<code class="plain">${esc(r.value)}</code>` : ""}</td>
-      <td>${esc(e.name)}</td><td>${esc(e.owner || t("personal"))}</td><td>${esc(e.collections.join(", ") || "-")}</td>
-      <td>${esc(e.hosts.join(", ") || "-")}</td><td>${esc((e.features || []).map(featureText).join(", ") || "-")}</td><td>${esc((e.revision || "").slice(0, 10))}</td></tr>`;
+      <td><button class="link toggle" data-details="${esc(e.id)}" aria-expanded="${d && d.open ? "true" : "false"}"><span class="caret${d && d.open ? " open" : ""}"></span>${esc(e.name)}</button></td>
+      <td>${esc(e.username || "-")}</td><td>${esc(e.owner || t("personal"))}</td><td>${esc(e.folder || "-")}</td><td>${esc(e.collections.join(", ") || "-")}</td>
+      <td>${esc(e.hosts.join(", ") || "-")}</td><td>${esc((e.features || []).map(featureText).join(", ") || "-")}</td><td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
+      ${d && d.open ? `<tr class="detail"><td></td><td colspan="10">${detailsHTML(d)}</td></tr>` : ""}`;
   }).join("");
   el.innerHTML = `<div class="ghead"><label><input type="checkbox" data-active ${g.active ? "checked" : ""} ${blocked.length || busy() ? "disabled" : ""}> <b>${g.no}. ${esc(g.title)}</b></label>
       <span class="muted">${esc(t("scope_" + scope))}</span>${tags.join("")}</div>
     <div class="name"><span class="muted">${esc(t("name_after"))}</span><input type="text" data-name value="${esc(g.newName || "")}" placeholder="${esc(keeper.name || "")}"></div>
-    <div class="scroll"><table><tr><th>${esc(t("col_with"))}</th><th>${esc(t("col_keep"))}</th><th>${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_owner"))}</th><th>${esc(t("col_collections"))}</th><th>${esc(t("col_hosts"))}</th><th>${esc(t("col_extras"))}</th><th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
+    <div class="scroll"><table><tr><th>${esc(t("col_with"))}</th><th>${esc(t("col_keep"))}</th><th>${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th>${esc(t("col_owner"))}</th><th>${esc(t("col_folder"))}</th><th>${esc(t("col_collections"))}</th><th>${esc(t("col_hosts"))}</th><th>${esc(t("col_extras"))}</th><th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
 
   const changed = (rerender = true) => { if (rerender) fillCard(el, g); renderReviewToolbar(); scheduleSave(); };
   el.querySelector("[data-active]").onchange = (ev) => { g.active = ev.target.checked; changed(); };
@@ -448,6 +496,7 @@ function fillCard(el, g) {
   el.querySelectorAll("[data-keeper]").forEach((x) => x.onchange = () => { g.keeper = x.dataset.keeper; changed(); });
   el.querySelectorAll("[data-pwfrom]").forEach((x) => x.onchange = () => { g.passwordFrom = x.dataset.pwfrom; changed(false); });
   el.querySelectorAll("[data-reveal]").forEach((x) => x.onclick = () => reveal(x.dataset.reveal, el));
+  el.querySelectorAll("[data-details]").forEach((x) => x.onclick = () => toggleDetails(x.dataset.details, el));
   el.querySelector("[data-name]").oninput = (ev) => { g.newName = ev.target.value.trim(); changed(false); };
 }
 

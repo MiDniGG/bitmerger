@@ -95,3 +95,14 @@ td{line-height:1.4}
 label.field .prefixed span{display:flex;align-items:center;margin:0;padding:0 2px 0 12px;font-size:14px;color:var(--muted);user-select:none}
 .prefixed input{border:0;border-radius:0;padding-left:2px;outline:none;background:transparent}
 .prefixed input:focus{outline:none}
+.toggle{color:var(--text);text-align:left;font:inherit}
+.toggle:hover{color:var(--accent)}
+.nowrap{white-space:nowrap}
+tr.detail td{background:var(--bg);border-bottom:1px solid var(--line);padding:12px 14px}
+.details{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:13px}
+.details .dk{color:var(--muted)}
+.details .dv{word-break:break-word}
+.details .note{white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--card)}
+.toggle{display:inline-flex;gap:6px;align-items:center}
+.caret{display:inline-block;width:7px;height:7px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(-45deg);margin:0 4px 1px 0;transition:transform .15s;flex:none}
+.caret.open{transform:rotate(45deg);margin-bottom:3px}

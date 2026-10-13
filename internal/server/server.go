@@ -158,6 +158,7 @@ func (s *Server) Serve(l net.Listener) error {
 	api("/api/scan", s.handleScan)
 	api("/api/plan", s.handlePlan)
 	api("/api/password", s.handlePassword)
+	api("/api/details", s.handleDetails)
 	api("/api/dryrun", s.handleDryRun)
 	api("/api/apply", s.handleApply)
 	api("/api/selftest", s.handleSelftest)

@@ -203,6 +203,12 @@ type Snapshot struct {
 	Items       []dedupe.Item
 	Orgs        []Org
 	Collections []Collection
+	Folders     []Folder
+}
+
+type Folder struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func (c *Client) Snapshot() (*Snapshot, error) {
@@ -221,12 +227,20 @@ func (c *Client) Snapshot() (*Snapshot, error) {
 	if err := c.runJSON(&s.Collections, "list", "collections"); err != nil {
 		return nil, err
 	}
+	if err := c.runJSON(&s.Folders, "list", "folders"); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
 // Directory maps IDs to names for the plan.
 func (s *Snapshot) Directory() dedupe.Directory {
-	d := dedupe.Directory{Orgs: map[string]string{}, Collections: map[string]string{}}
+	d := dedupe.Directory{Orgs: map[string]string{}, Collections: map[string]string{}, Folders: map[string]string{}}
+	for _, f := range s.Folders {
+		if f.ID != "" {
+			d.Folders[f.ID] = f.Name
+		}
+	}
 	for _, o := range s.Orgs {
 		d.Orgs[o.ID] = o.Name
 	}

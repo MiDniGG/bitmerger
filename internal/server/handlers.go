@@ -405,3 +405,100 @@ func (s *Server) backend() (Backend, error) {
 	}
 	return bw.NewClient(bin)
 }
+
+// itemDetails is what the review page shows when a row is expanded. It is
+// read live from the vault and never stored. Hidden custom fields stay hidden.
+type itemDetails struct {
+	Username        string        `json:"username"`
+	URIs            []detailURI   `json:"uris"`
+	Created         string        `json:"created"`
+	Revised         string        `json:"revised"`
+	PasswordRevised string        `json:"passwordRevised"`
+	Notes           string        `json:"notes"`
+	Fields          []detailField `json:"fields"`
+	History         []string      `json:"history"` // dates only
+	Attachments     []detailFile  `json:"attachments"`
+	TOTP            bool          `json:"totp"`
+	Passkey         bool          `json:"passkey"`
+	Favorite        bool          `json:"favorite"`
+	Reprompt        bool          `json:"reprompt"`
+}
+
+type detailURI struct {
+	URI   string `json:"uri"`
+	Match any    `json:"match"`
+}
+
+type detailField struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Hidden bool   `json:"hidden"`
+}
+
+type detailFile struct {
+	Name string `json:"name"`
+	Size string `json:"size"`
+}
+
+func (s *Server) handleDetails(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	s.mu.Lock()
+	c, plan := s.client, s.plan
+	s.mu.Unlock()
+	if c == nil || plan == nil {
+		writeError(w, http.StatusUnauthorized, "not logged in")
+		return
+	}
+	known := false
+	for _, g := range plan.Groups {
+		for _, e := range g.Entries {
+			if e.ID == id {
+				known = true
+			}
+		}
+	}
+	if !known {
+		writeError(w, http.StatusNotFound, "unknown item")
+		return
+	}
+	it, err := c.Get(id)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	str := func(v any) string { s, _ := v.(string); return s }
+	d := itemDetails{
+		Username: it.Username(), Created: str(it["creationDate"]), Revised: it.RevisionDate(),
+		PasswordRevised: str(it.Login()["passwordRevisionDate"]), Notes: it.Notes(),
+		TOTP: it.TOTP() != "", Passkey: it.HasPasskey(), Favorite: it.Favorite(),
+		URIs: []detailURI{}, Fields: []detailField{}, History: []string{}, Attachments: []detailFile{},
+	}
+	if rp, ok := it["reprompt"].(float64); ok && rp > 0 {
+		d.Reprompt = true
+	}
+	if l, ok := it.Login()["uris"].([]any); ok {
+		for _, u := range l {
+			if m, ok := u.(map[string]any); ok && str(m["uri"]) != "" {
+				d.URIs = append(d.URIs, detailURI{URI: str(m["uri"]), Match: m["match"]})
+			}
+		}
+	}
+	for _, f := range it.Fields() {
+		hidden := false
+		if t, ok := f["type"].(float64); ok && t == 1 {
+			hidden = true
+		}
+		v := str(f["value"])
+		if hidden {
+			v = ""
+		}
+		d.Fields = append(d.Fields, detailField{Name: str(f["name"]), Value: v, Hidden: hidden})
+	}
+	for _, h := range it.History() {
+		d.History = append(d.History, h.LastUsedDate)
+	}
+	for _, a := range it.Attachments() {
+		d.Attachments = append(d.Attachments, detailFile{Name: str(a["fileName"]), Size: str(a["sizeName"])})
+	}
+	writeJSON(w, d)
+}

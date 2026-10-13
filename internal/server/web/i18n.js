@@ -62,6 +62,9 @@ const TEXTS = {
     bye: "BitMerger has ended. You can close this tab.",
     error_generic: "Something went wrong: {e}",
     back_review: "Back to review",
+    col_user: "Username", col_folder: "Folder", hidden: "(hidden)", reprompt: "master password re-prompt",
+    d_username: "Username", d_uris: "URLs", d_created: "Created", d_revised: "Changed", d_pw_revised: "Password changed", d_history: "Password history", d_fields: "Custom fields", d_attachments: "Attachments", d_flags: "Other", d_notes: "Note",
+    match_default: "default match", match_domain: "base domain", match_host_rule: "host", match_starts: "starts with", match_exact: "exact", match_regex: "regex", match_never: "never",
   },
   de: {
     quit: "Beenden", logout: "Abmelden", lang_switch: "EN",
@@ -125,6 +128,9 @@ const TEXTS = {
     bye: "BitMerger ist beendet. Du kannst diesen Tab schließen.",
     error_generic: "Da ging etwas schief: {e}",
     back_review: "Zurück zum Prüfen",
+    col_user: "Benutzername", col_folder: "Ordner", hidden: "(verborgen)", reprompt: "Master-Passwort erneut abfragen",
+    d_username: "Benutzername", d_uris: "URLs", d_created: "Erstellt", d_revised: "Geändert", d_pw_revised: "Passwort geändert", d_history: "Passwort-Historie", d_fields: "Zusatzfelder", d_attachments: "Anhänge", d_flags: "Sonstiges", d_notes: "Notiz",
+    match_default: "Standard-Erkennung", match_domain: "Basis-Domain", match_host_rule: "Host", match_starts: "beginnt mit", match_exact: "exakt", match_regex: "regulärer Ausdruck", match_never: "nie",
   },
 };
 

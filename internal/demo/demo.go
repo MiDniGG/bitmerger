@@ -60,6 +60,7 @@ func (b *Backend) Snapshot() (*bw.Snapshot, error) {
 	return &bw.Snapshot{
 		Items:       b.List(),
 		Orgs:        []bw.Org{{ID: "o1", Name: "Family"}, {ID: "o2", Name: "Work"}},
+		Folders:     []bw.Folder{{ID: "f1", Name: "Shopping"}, {ID: "f2", Name: "Home network"}},
 		Collections: []bw.Collection{{ID: "c1", OrganizationID: "o1", Name: "Shopping"}, {ID: "c2", OrganizationID: "o2", Name: "Apps"}, {ID: "c3", OrganizationID: "o1", Name: "Finance"}},
 	}, nil
 }
@@ -110,9 +111,15 @@ func sampleItems() []dedupe.Item {
 	amazonFamily := inOrg(login("2", "amazon.de", "jane@example.com", "Winter-Is-7", "2026-01-01T10:00:00Z", "amazon.de/login"), "o1", "c1")
 	amazonFamily["login"].(map[string]any)["totp"] = "JBSWY3DPEHPK3PXP"
 	amazonApp := inOrg(login("3", "Amazon App", "jane@example.com", "Sunny-Day-42", "2026-01-02T10:00:00Z", "androidapp://de.amazon.mShop"), "o2", "c2")
+	amazonPersonal["folderId"] = "f1"
+	amazonPersonal["creationDate"] = "2019-03-02T08:11:00Z"
+	amazonPersonal["fields"] = []any{map[string]any{"name": "Customer no.", "value": "4711", "type": float64(0)}, map[string]any{"name": "PIN", "value": "1234", "type": float64(1)}}
+	router := login("4", "Router", "", "admin-pw-1", "2026-01-01T10:00:00Z", "http://192.168.178.1")
+	router["folderId"] = "f2"
+	router["notes"] = "FRITZ!Box 7590\nWLAN key on the back"
 	return []dedupe.Item{
 		amazonPersonal, amazonFamily, amazonApp,
-		login("4", "Router", "", "admin-pw-1", "2026-01-01T10:00:00Z", "http://192.168.178.1"),
+		router,
 		login("5", "Router old", "", "admin-pw-1", "2025-06-01T10:00:00Z", "http://192.168.178.1:80/"),
 		login("6", "Microsoft", "jane@example.com", "Blue-Sky-9", "2026-02-01T10:00:00Z", "https://login.live.com"),
 		login("7", "MS account", "jane@example.com", "Blue-Sky-9", "2026-02-01T09:00:00Z", "https://account.microsoft.com"),

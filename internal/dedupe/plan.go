@@ -47,6 +47,8 @@ type PlanEntry struct {
 	Include     bool      `json:"include"`
 	Name        string    `json:"name"`
 	Owner       string    `json:"owner"` // organization name, empty = personal
+	Folder      string    `json:"folder"`
+	Username    string    `json:"username"`
 	Collections []string  `json:"collections"`
 	PW          string    `json:"pw"` // P1, P2 ... or "-"
 	Hosts       []string  `json:"hosts"`
@@ -64,6 +66,7 @@ type Feature struct {
 type Directory struct {
 	Orgs        map[string]string
 	Collections map[string]string
+	Folders     map[string]string
 }
 
 // Scope tells where the items of a group live.
@@ -224,6 +227,7 @@ func BuildPlan(items []Item, dir Directory, match Match) *Plan {
 			}
 			pg.Entries = append(pg.Entries, &PlanEntry{
 				ID: it.ID(), Include: true, Name: it.Name(), Owner: owner,
+				Folder: dir.Folders[it.FolderID()], Username: it.Username(),
 				Collections: nonNil(colls), PW: labels[i], Hosts: nonNil(hostList(it)),
 				Features: features(it), Revision: it.RevisionDate(),
 			})
