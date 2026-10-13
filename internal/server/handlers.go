@@ -18,7 +18,13 @@ type stateResponse struct {
 	Account   *account       `json:"account,omitempty"`
 	HasPlan   bool           `json:"hasPlan"`
 	LastLogin *lastLogin     `json:"lastLogin,omitempty"`
+	Folders   []folderState  `json:"folders"`
 	Job       *Job           `json:"job,omitempty"`
+}
+
+type folderState struct {
+	dedupe.FolderInfo
+	Skip bool `json:"skip"`
 }
 
 func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +35,13 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	resp := stateResponse{Version: s.Version, BWVersion: bw.Version, BWReady: ready,
 		Download: s.download, Account: s.account, HasPlan: s.plan != nil && s.account != nil && s.plan.Account == s.account.Email,
-		LastLogin: s.lastLogin}
+		LastLogin: s.lastLogin, Folders: []folderState{}}
+	if s.account != nil {
+		skip := s.prefs.skipSet(s.folders)
+		for _, f := range s.folders {
+			resp.Folders = append(resp.Folders, folderState{FolderInfo: f, Skip: skip[f.ID]})
+		}
+	}
 	if s.job != nil {
 		j := s.job.snapshot()
 		j.Result = nil // fetched separately; can be large
@@ -121,19 +133,20 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		last.Email = ""
 	}
 	_ = saveJSON(s.loginFile, last)
-	// A saved plan may come from an older version or the vault may have
-	// changed since; refresh what the review shows before it is opened.
-	var snap *bw.Snapshot
+	// The scan page lists the folders. A saved plan may come from an older
+	// version or the vault may have changed since; refresh what the review
+	// shows before it is opened.
+	snap, _ := client.Snapshot()
 	s.mu.Lock()
-	hasPlan := s.plan != nil && s.plan.Account == email
-	s.mu.Unlock()
-	if hasPlan {
-		snap, _ = client.Snapshot()
-	}
-	s.mu.Lock()
-	if snap != nil && s.plan != nil {
-		s.plan.Refresh(snap.Items, snap.Directory())
-		_ = savePlan(s.planFile, s.plan)
+	s.folders = nil
+	if snap != nil {
+		dir := snap.Directory()
+		s.folders = dedupe.Folders(snap.Items, dir)
+		if s.plan != nil && s.plan.Account == email {
+			dir.Skip = s.prefs.skipSet(s.folders)
+			s.plan.Refresh(snap.Items, dir)
+			_ = savePlan(s.planFile, s.plan)
+		}
 	}
 	s.account = &account{Email: email, Server: st.ServerURL, Fast: fast}
 	s.lastLogin = last
@@ -153,7 +166,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := s.client
-	s.client, s.account = nil, nil
+	s.client, s.account, s.folders = nil, nil, nil
 	s.mu.Unlock()
 	if c != nil {
 		c.Close()
@@ -206,11 +219,18 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Match dedupe.Match `json:"match"`
+		Match       dedupe.Match `json:"match"`
+		SkipFolders []string     `json:"skipFolders"`
 	}
 	_ = readJSON(r, &req)
 	if req.Match != dedupe.MatchDomain {
 		req.Match = dedupe.MatchHost
+	}
+	if req.SkipFolders != nil {
+		s.mu.Lock()
+		s.prefs.SkipFolders = req.SkipFolders
+		_ = saveJSON(s.prefsFile, s.prefs)
+		s.mu.Unlock()
 	}
 	s.startJob(w, "scan", func(c Backend, j *Job) error {
 		snap, err := syncAndRead(c, j)
@@ -218,7 +238,13 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		j.set(func(j *Job) { j.Phase = "group" })
-		plan := dedupe.BuildPlan(snap.Items, snap.Directory(), req.Match)
+		dir := snap.Directory()
+		folders := dedupe.Folders(snap.Items, dir)
+		s.mu.Lock()
+		dir.Skip = s.prefs.skipSet(folders)
+		s.folders = folders
+		s.mu.Unlock()
+		plan := dedupe.BuildPlan(snap.Items, dir, req.Match)
 		s.mu.Lock()
 		if s.account != nil {
 			plan.Account = s.account.Email

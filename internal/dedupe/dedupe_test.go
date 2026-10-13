@@ -246,3 +246,24 @@ func TestRefreshFillsDisplayFieldsKeepsRevision(t *testing.T) {
 		t.Fatalf("revision changed to %q", e.Revision)
 	}
 }
+
+func TestSkippedFolderIsIgnored(t *testing.T) {
+	items := []Item{
+		login("a", "Shop", "me", "x", "https://shop.example"),
+		login("b", "Shop", "me", "x", "https://shop.example"),
+	}
+	items[1]["folderId"] = "bin"
+	dir := Directory{Folders: map[string]string{"bin": "Import/Papierkorb"}, Skip: map[string]bool{"bin": true}}
+	if f := Folders(items, dir); len(f) != 1 || !f[0].Trash || f[0].Count != 1 {
+		t.Fatalf("folders %+v", f)
+	}
+	if plan := BuildPlan(items, dir, MatchHost); len(plan.Groups) != 0 {
+		t.Fatalf("got %d groups, want 0", len(plan.Groups))
+	}
+	plan := BuildPlan(items, Directory{}, MatchHost)
+	plan.Refresh(items, dir)
+	g := plan.Groups[0]
+	if g.Active || g.Entries[1].Include {
+		t.Fatalf("trash entry still included: active %v include %v", g.Active, g.Entries[1].Include)
+	}
+}

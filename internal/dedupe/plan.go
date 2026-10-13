@@ -2,6 +2,8 @@ package dedupe
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -67,6 +69,7 @@ type Directory struct {
 	Orgs        map[string]string
 	Collections map[string]string
 	Folders     map[string]string
+	Skip        map[string]bool // folder IDs whose items are left out
 }
 
 // Scope tells where the items of a group live.
@@ -168,7 +171,7 @@ func suggestKeeper(items []Item) string {
 func BuildPlan(items []Item, dir Directory, match Match) *Plan {
 	var live []Item
 	for _, it := range items {
-		if !it.Deleted() {
+		if !it.Deleted() && !dir.Skip[it.FolderID()] {
 			live = append(live, it)
 		}
 	}
@@ -240,6 +243,34 @@ func (e *PlanEntry) describe(it Item, dir Directory) {
 	e.Collections, e.Hosts, e.Features = nonNil(colls), nonNil(hostList(it)), features(it)
 }
 
+// FolderInfo is a folder as the scan page lists it.
+type FolderInfo struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+	Trash bool   `json:"trash"`
+}
+
+// Folders lists the folders that hold items, sorted by name.
+func Folders(items []Item, dir Directory) []FolderInfo {
+	count := map[string]int{}
+	for _, it := range items {
+		if !it.Deleted() && it.FolderID() != "" {
+			count[it.FolderID()]++
+		}
+	}
+	out := []FolderInfo{}
+	for id, n := range count {
+		name := dir.Folders[id]
+		if name == "" {
+			name = "?"
+		}
+		out = append(out, FolderInfo{ID: id, Name: name, Count: n, Trash: IsTrashFolder(name)})
+	}
+	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
+	return out
+}
+
 // Refresh updates what the review shows (name, folder, username, ...) from
 // the current vault. Decisions, password labels and the revision the plan
 // was made from stay, so a changed item is still detected before merging.
@@ -252,12 +283,38 @@ func (p *Plan) Refresh(items []Item, dir Directory) {
 		}
 	}
 	for _, g := range p.Groups {
+		included := 0
 		for _, e := range g.Entries {
 			if it, ok := byID[e.ID]; ok {
 				e.describe(it, dir)
+				if dir.Skip[it.FolderID()] {
+					e.Include = false
+				}
+			}
+			if e.Include {
+				included++
 			}
 		}
+		if included < 2 {
+			g.Active = false
+		}
 	}
+}
+
+// trashFolders are the names password managers give their recycle bin.
+// Imports (KeePass in particular) bring it along as an ordinary folder.
+var trashFolders = map[string]bool{
+	"papierkorb": true, "recycle bin": true, "trash": true, "deleted items": true,
+	"gelöschte objekte": true, "gelöschte elemente": true, "corbeille": true, "papelera": true, "cestino": true, "prullenbak": true,
+}
+
+// IsTrashFolder reports whether a folder (or nested folder "a/b") is a
+// recycle bin. Such folders are left out unless the user includes them.
+func IsTrashFolder(name string) bool {
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		name = name[i+1:]
+	}
+	return trashFolders[strings.ToLower(strings.TrimSpace(name))]
 }
 
 // ApplyDecisions copies the user's choices from a posted plan onto the

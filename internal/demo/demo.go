@@ -60,7 +60,7 @@ func (b *Backend) Snapshot() (*bw.Snapshot, error) {
 	return &bw.Snapshot{
 		Items:       b.List(),
 		Orgs:        []bw.Org{{ID: "o1", Name: "Family"}, {ID: "o2", Name: "Work"}},
-		Folders:     []bw.Folder{{ID: "f1", Name: "Shopping"}, {ID: "f2", Name: "Home network"}},
+		Folders:     []bw.Folder{{ID: "f1", Name: "Shopping"}, {ID: "f2", Name: "Home network"}, {ID: "f3", Name: "Recycle Bin"}},
 		Collections: []bw.Collection{{ID: "c1", OrganizationID: "o1", Name: "Shopping"}, {ID: "c2", OrganizationID: "o2", Name: "Apps"}, {ID: "c3", OrganizationID: "o1", Name: "Finance"}},
 	}, nil
 }
@@ -117,9 +117,11 @@ func sampleItems() []dedupe.Item {
 	router := login("4", "Router", "", "admin-pw-1", "2026-01-01T10:00:00Z", "http://192.168.178.1")
 	router["folderId"] = "f2"
 	router["notes"] = "FRITZ!Box 7590\nWLAN key on the back"
+	binned := login("90", "Microsoft (old import)", "jane@example.com", "Blue-Sky-9", "2024-02-01T10:00:00Z", "https://login.live.com")
+	binned["folderId"] = "f3"
 	return []dedupe.Item{
 		amazonPersonal, amazonFamily, amazonApp,
-		router,
+		router, binned,
 		login("5", "Router old", "", "admin-pw-1", "2025-06-01T10:00:00Z", "http://192.168.178.1:80/"),
 		login("6", "Microsoft", "jane@example.com", "Blue-Sky-9", "2026-02-01T10:00:00Z", "https://login.live.com"),
 		login("7", "MS account", "jane@example.com", "Blue-Sky-9", "2026-02-01T09:00:00Z", "https://account.microsoft.com"),

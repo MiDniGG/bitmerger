@@ -51,6 +51,9 @@ type Server struct {
 	planFile   string
 	loginFile  string
 	lastLogin  *lastLogin
+	prefsFile  string
+	prefs      prefs
+	folders    []dedupe.FolderInfo
 	account    *account
 	plan       *dedupe.Plan
 	job        *Job
@@ -99,10 +102,11 @@ func New(version string, newBackend func() (Backend, error)) (*Server, net.Liste
 	}
 	s := &Server{Version: version, token: hex.EncodeToString(b), addr: l.Addr().String(),
 		quit: make(chan struct{}), lastSeen: time.Now(), newBackend: newBackend}
-	s.planFile, s.loginFile = "plan.json", "login.json"
+	s.planFile, s.loginFile, s.prefsFile = "plan.json", "login.json", "prefs.json"
 	if newBackend != nil {
-		s.planFile, s.loginFile = "plan-demo.json", "login-demo.json"
+		s.planFile, s.loginFile, s.prefsFile = "plan-demo.json", "login-demo.json", "prefs-demo.json"
 	}
+	s.prefs = loadPrefs(s.prefsFile)
 	s.plan = loadPlan(s.planFile)
 	s.lastLogin = loadLastLogin(s.loginFile)
 	return s, l, nil
@@ -305,6 +309,40 @@ func loadLastLogin(name string) *lastLogin {
 		return nil
 	}
 	return &l
+}
+
+// prefs are choices on the scan page that carry over to the next start.
+type prefs struct {
+	// SkipFolders are folder IDs left out of the scan. nil means never
+	// chosen: then recycle bin folders are left out.
+	SkipFolders []string `json:"skipFolders"`
+}
+
+func loadPrefs(name string) prefs {
+	var p prefs
+	if path := planPath(name); path != "" {
+		if b, err := os.ReadFile(path); err == nil {
+			_ = json.Unmarshal(b, &p)
+		}
+	}
+	return p
+}
+
+// skipSet resolves the folders to leave out for the given folder list.
+func (p prefs) skipSet(folders []dedupe.FolderInfo) map[string]bool {
+	skip := map[string]bool{}
+	if p.SkipFolders == nil {
+		for _, f := range folders {
+			if f.Trash {
+				skip[f.ID] = true
+			}
+		}
+		return skip
+	}
+	for _, id := range p.SkipFolders {
+		skip[id] = true
+	}
+	return skip
 }
 
 func saveJSON(name string, v any) error {

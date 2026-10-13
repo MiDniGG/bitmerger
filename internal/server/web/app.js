@@ -32,6 +32,7 @@ const app = {
   error: null,
   login: { tab: "password", server: "us", url: "", email: "", clientId: "", method: "", twoStep: null, prefilled: false },
   match: "host",
+  skip: null,          // folder IDs to leave out once the user changed them; null = server's choice
   filter: "all",
   reveal: {},          // id -> {state: "loading"|"shown", value, timer}
   details: {},         // id -> {open, state: "loading"|"ok"|"error", data, error}
@@ -371,11 +372,26 @@ function viewScan() {
   const testing = jobRunning() && app.server.job.kind === "selftest";
   return `<div class="panel"><h2>${esc(t("scan_title"))}</h2><p>${esc(t("scan_text"))}</p>
       ${choice("host")}${choice("domain")}
+      ${viewFolders(running)}
       <p class="muted">${esc(t("always_rule"))}</p>
       <div class="row" style="margin-top:14px"><button class="btn" id="scan" ${running ? "disabled" : ""}>${scanning ? '<span class="spinner"></span>' : ""}${esc(scanning ? t("scan_running") : t("scan_button"))}</button>
       ${app.plan ? `<button class="btn secondary" id="toReview" ${running ? "disabled" : ""}>${esc(t("back_review"))}</button>` : ""}</div></div>
     <div class="panel"><h2>${esc(t("selftest_title"))}</h2><p>${esc(t("selftest_text"))}</p>${selftestResult()}
       <div class="row" style="margin-top:12px"><button class="btn secondary" id="selftest" ${running ? "disabled" : ""}>${testing ? '<span class="spinner"></span>' : ""}${esc(testing ? t("phase_selftest") : t("selftest_button"))}</button></div></div>`;
+}
+
+function skippedFolders() {
+  const folders = (app.server && app.server.folders) || [];
+  return app.skip || new Set(folders.filter((f) => f.skip).map((f) => f.id));
+}
+
+function viewFolders(running) {
+  const folders = (app.server && app.server.folders) || [];
+  if (!folders.length) return "";
+  const skip = skippedFolders();
+  return `<div class="folders"><b>${esc(t("folders_title"))}</b><small class="muted">${esc(t("folders_hint"))}</small>
+    <div class="folder-list">${folders.map((f) => `<label class="check ${skip.has(f.id) ? "off" : ""}"><input type="checkbox" name="folder" value="${esc(f.id)}" ${skip.has(f.id) ? "" : "checked"} ${running ? "disabled" : ""}>
+      <span>${esc(f.name)}</span><span class="muted">${f.count}</span>${f.trash ? `<span class="tag">${esc(t("folder_trash"))}</span>` : ""}</label>`).join("")}</div></div>`;
 }
 
 function selftestResult() {
@@ -589,7 +605,13 @@ function bind(view) {
 
   }
   document.querySelectorAll("input[name=match]").forEach((r) => r.onchange = () => { app.match = r.value; render(); });
-  on("#scan", "onclick", () => startJob("/api/scan", { match: app.match }));
+  document.querySelectorAll("input[name=folder]").forEach((c) => c.onchange = () => {
+    const skip = new Set(skippedFolders());
+    if (c.checked) skip.delete(c.value); else skip.add(c.value);
+    app.skip = skip;
+    render();
+  });
+  on("#scan", "onclick", () => startJob("/api/scan", { match: app.match, skipFolders: [...skippedFolders()] }));
   on("#selftest", "onclick", () => { app.selftest = null; startJob("/api/selftest"); });
   on("#toReview", "onclick", async () => { if (!app.plan) await loadPlan(); app.view = "review"; render(); });
   on("#merge", "onclick", () => {
