@@ -530,6 +530,16 @@ function pwBadge(e) {
   return `<span class="pwtag c${idx % 6}"${tip}>${esc(t("pw_name", { l }))}</span>`;
 }
 
+// "Personal · Internet" or "Family · Finance"; nested folders show their last
+// part, the full path is in the tooltip.
+function locationHTML(e) {
+  const parts = [e.owner || t("personal")];
+  if (e.folder) parts.push(e.folder.split("/").pop());
+  for (const c of e.collections || []) parts.push(c.split("/").pop());
+  const full = [e.owner || t("personal"), e.folder, ...(e.collections || [])].filter(Boolean).join(" · ");
+  return `<span title="${esc(full)}">${esc(parts.join(" · "))}</span>`;
+}
+
 function featureText(f) { return t("feat_" + f.kind, { n: f.count || 0 }); }
 
 function fillCard(el, g) {
@@ -542,11 +552,7 @@ function fillCard(el, g) {
   for (const n of g.notes) tags.push(`<span class="tag warn">${esc(t("note_" + n))}</span>`);
   for (const b of blocked) tags.push(`<span class="tag err">${esc(b)}</span>`);
   // columns that are empty for every entry of this card are left out
-  const show = {
-    folder: g.entries.some((e) => e.folder),
-    collections: g.entries.some((e) => e.collections.length),
-    extras: g.entries.some((e) => (e.features || []).length),
-  };
+  const show = { extras: g.entries.some((e) => (e.features || []).length) };
   const cols = 8 + Object.values(show).filter(Boolean).length;
   const rows = g.entries.map((e) => {
     const r = app.reveal[e.id];
@@ -560,14 +566,14 @@ function fillCard(el, g) {
       <td class="ename">${esc(e.name)}</td>
       <td>${esc(e.username || "-")}</td>
       <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${e.pw === "-" ? "-" : r && r.state === "shown" ? `<code class="plain inline" title="${esc(r.value)}">${esc(r.value)}</code>` : pwBadge(e)}</label>${revealBtn}</div></td>
-      <td>${esc(e.owner || t("personal"))}</td>${show.folder ? `<td>${esc(e.folder || "-")}</td>` : ""}${show.collections ? `<td>${esc(e.collections.join(", ") || "-")}</td>` : ""}
+      <td>${locationHTML(e)}</td>
       <td class="hosts">${esc(e.hosts.join(", ") || "-")}</td>${show.extras ? `<td class="extras">${esc((e.features || []).map(featureText).join(", ") || "-")}</td>` : ""}<td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
       ${d && d.open ? `<tr class="detail"><td></td><td colspan="${cols - 1}">${detailsHTML(d)}</td></tr>` : ""}`;
   }).join("");
   el.innerHTML = `<div class="ghead"><label><input type="checkbox" data-active ${g.active ? "checked" : ""} ${blocked.length || busy() ? "disabled" : ""}> <b>${g.no}. ${esc(g.title)}</b></label>
       <span class="muted">${esc(t("scope_" + scope))}</span>${tags.join("")}</div>
     <div class="name"><span class="muted">${esc(t("name_after"))}</span><input type="text" data-name value="${esc(g.newName || "")}" placeholder="${esc(keeper.name || "")}"></div>
-    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th>${esc(t("col_owner"))}</th>${show.folder ? `<th>${esc(t("col_folder"))}</th>` : ""}${show.collections ? `<th>${esc(t("col_collections"))}</th>` : ""}<th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
+    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th title="${esc(t("tip_location"))}">${esc(t("col_location"))}</th><th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
 
   const changed = (rerender = true) => { if (rerender) fillCard(el, g); renderReviewToolbar(); scheduleSave(); };
   el.querySelector("[data-active]").onchange = (ev) => { g.active = ev.target.checked; changed(); };

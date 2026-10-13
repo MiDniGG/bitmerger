@@ -144,6 +144,6 @@ tr.entry.open td{background:var(--accent-soft)}
 .pwtag.c0{background:#1e3a8a;color:#bfdbfe}.pwtag.c1{background:#7c2d12;color:#fed7aa}.pwtag.c2{background:#14532d;color:#bbf7d0}
 .pwtag.c3{background:#581c87;color:#e9d5ff}.pwtag.c4{background:#713f12;color:#fef08a}.pwtag.c5{background:#831843;color:#fbcfe8}}
 tr.excluded .pwtag{opacity:.5}
-td.hosts{overflow-wrap:anywhere;min-width:90px}
+td.hosts{overflow-wrap:anywhere;min-width:150px}
 td.extras{min-width:100px}
 code.plain.inline{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;margin:0;padding:1px 6px;font-size:12.5px}
