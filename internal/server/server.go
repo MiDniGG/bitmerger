@@ -75,6 +75,7 @@ type Backend interface {
 	dedupe.Vault
 	Login(r bw.LoginRequest) error
 	StartServe() error
+	StopServe()
 	Status() (bw.Status, error)
 	Unlocked() bool
 	Sync() error

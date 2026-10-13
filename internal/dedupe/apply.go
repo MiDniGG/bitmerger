@@ -268,13 +268,17 @@ func Apply(v Vault, s *Step) error {
 	for _, h := range actual.History() {
 		have[h.Password] = true
 	}
+	found := 0
 	for _, pw := range s.expected {
-		if !have[pw] {
-			return ErrVerify
+		if have[pw] {
+			found++
 		}
 	}
+	if found < len(s.expected) {
+		return fmt.Errorf("%w: %d of %d old passwords in the history", ErrVerify, found, len(s.expected))
+	}
 	if item.Type() == TypeLogin && actual.Password() != s.target {
-		return ErrVerify
+		return fmt.Errorf("%w: password not set", ErrVerify)
 	}
 	if len(s.collections) > 0 {
 		before := append([]string{}, s.keeper.CollectionIDs()...)

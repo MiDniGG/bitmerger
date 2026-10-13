@@ -42,6 +42,7 @@ func (b *Backend) Login(r bw.LoginRequest) error {
 }
 
 func (b *Backend) StartServe() error { return nil }
+func (b *Backend) StopServe()        {}
 
 func (b *Backend) Status() (bw.Status, error) {
 	st := "locked"

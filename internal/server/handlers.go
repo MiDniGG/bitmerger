@@ -325,6 +325,8 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 				ready = append(ready, st)
 			}
 		}
+		c.StopServe()
+		defer func() { _ = c.StartServe() }()
 		j.set(func(j *Job) { j.Phase, j.Total = "merge", len(ready) })
 		for _, st := range ready {
 			if j.cancelled() {
@@ -350,6 +352,8 @@ func (s *Server) handleSelftest(w http.ResponseWriter, r *http.Request) {
 	}
 	s.startJob(w, "selftest", func(c Backend, j *Job) error {
 		j.set(func(j *Job) { j.Phase = "selftest" })
+		c.StopServe()
+		defer func() { _ = c.StartServe() }()
 		res := dedupe.Selftest(c, 1200*time.Millisecond)
 		j.set(func(j *Job) { j.Result = res })
 		return c.Sync()

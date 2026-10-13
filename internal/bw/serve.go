@@ -69,6 +69,20 @@ func (c *Client) StartServe() error {
 	return errors.New("bw serve did not start")
 }
 
+// StopServe ends `bw serve`; later calls start one CLI process each.
+//
+// Merging must not go through `bw serve`: on a real server its edits did not
+// record the previous password in the history (selftest case 2 failed), while
+// one process per edit does. Two processes writing the same data folder could
+// also overwrite each other's cache, so serve is stopped for the whole merge.
+func (c *Client) StopServe() {
+	c.mu.Lock()
+	s := c.serve
+	c.serve = nil
+	c.mu.Unlock()
+	s.stop()
+}
+
 func (s *serveConn) stop() {
 	if s != nil && s.cmd.Process != nil {
 		_ = s.cmd.Process.Kill()
