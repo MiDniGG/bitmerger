@@ -78,3 +78,5 @@ tr.excluded td:not(:first-child){color:var(--off);text-decoration:line-through}
 .checks li{list-style:none;margin:2px 0}
 .checks{padding-left:4px}
 @media (max-width:640px){.top{padding:8px 16px}main{padding:16px 16px 100px}.panel{padding:16px}.steps{display:none}}
+select,input[type=checkbox],input[type=radio],label.choice,.tabs button,button,.link{cursor:pointer}
+select:disabled,input:disabled,button:disabled{cursor:not-allowed}

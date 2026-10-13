@@ -133,6 +133,7 @@ async function doLogin(form) {
       l.twoStep = res.message || "";
     } else {
       l.twoStep = null;
+      l.pw = "";
       app.server = await api("GET", "/api/state");
       if (app.server.hasPlan) await loadPlan();
     }
@@ -216,9 +217,13 @@ function render() {
     renderReviewToolbar();
     return;
   }
+  if ($("#main").dataset.view !== view) app.lastHTML = null;
   $("#main").dataset.view = view;
   const views = { loading: () => "", setup: viewSetup, login: viewLogin, scan: viewScan, review: viewReview, dryrun: viewDryRun, merge: viewMerge };
-  $("#main").innerHTML = (app.error ? `<div class="msg err">${esc(app.error)}</div>` : "") + views[view]();
+  const html = (app.error ? `<div class="msg err">${esc(app.error)}</div>` : "") + views[view]();
+  if (html === app.lastHTML && $("#main").dataset.view === view) return;
+  app.lastHTML = html;
+  $("#main").innerHTML = html;
   bind(view);
 }
 
@@ -257,10 +262,10 @@ function viewLogin() {
     ${l.server === "self" ? `<label class="field"><span>${esc(t("server_url"))}</span><input type="url" name="url" value="${esc(l.url)}" placeholder="https://vault.example.com" required></label>` : ""}
     <div class="tabs">${tab("password")}${tab("apikey")}</div>
     ${l.tab === "apikey" ? `<p class="muted">${esc(t("apikey_hint"))}</p>
-      <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" required></label>
+      <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" value="${esc(l.clientId || "")}" required></label>
       <label class="field"><span>${esc(t("client_secret"))}</span><input type="password" name="clientSecret" required></label>`
       : `<label class="field"><span>${esc(t("email"))}</span><input type="email" name="email" value="${esc(l.email)}" required autocomplete="username"></label>`}
-    <label class="field"><span>${esc(t("master_password"))}</span><input type="password" name="password" required autocomplete="current-password"></label>
+    <label class="field"><span>${esc(t("master_password"))}</span><input type="password" name="password" value="${esc(l.pw || "")}" required autocomplete="current-password"></label>
     ${l.twoStep !== null && l.tab === "password" ? `<div class="msg info"><b>${esc(t("twostep_title"))}</b>${l.twoStep ? "<br>" + esc(l.twoStep) : ""}<br>${esc(t("twostep_email_hint"))}</div>
       <div class="row"><label class="field" style="flex:1"><span>${esc(t("twostep_method"))}</span><select name="twoStepMethod">
         ${["0", "1", "3"].map((m) => `<option value="${m}" ${l.method === m ? "selected" : ""}>${esc(t("method_" + m))}</option>`).join("")}</select></label>
@@ -316,11 +321,15 @@ function renderReviewToolbar() {
   const trash = act.reduce((s, g) => s + g.entries.filter((e) => e.include).length - 1, 0);
   const running = busy();
   const dry = jobRunning() && app.server.job.kind === "dryrun";
-  tb.innerHTML = `${app.error ? `<div class="msg err" style="flex-basis:100%">${esc(app.error)}</div>` : ""}<label>${esc(t("show"))} <select id="filter">${["all", "active", "inactive"].map((k) => `<option value="${k}" ${app.filter === k ? "selected" : ""}>${esc(t("show_" + k))}</option>`).join("")}</select></label>
+  const html = `${app.error ? `<div class="msg err" style="flex-basis:100%">${esc(app.error)}</div>` : ""}<label>${esc(t("show"))} <select id="filter">${["all", "active", "inactive"].map((k) => `<option value="${k}" ${app.filter === k ? "selected" : ""}>${esc(t("show_" + k))}</option>`).join("")}</select></label>
     <span class="count">${esc(t("count", { a: act.length, n: app.plan.groups.length, t: trash }))}</span>
     <span class="saved" id="saveState"></span><span class="spacer"></span>
     <button class="btn secondary" id="rescan" ${running ? "disabled" : ""}>${esc(t("rescan"))}</button>
     <button class="btn" id="dryrun" ${running || !act.length ? "disabled" : ""}>${dry ? '<span class="spinner"></span>' : ""}${esc(dry ? t("dryrun_running") : t("dryrun_button"))}</button>`;
+  // Polling calls this every few seconds; replacing unchanged markup would close an open dropdown.
+  if (tb.dataset.html === html) { renderSaveState(); return; }
+  tb.dataset.html = html;
+  tb.innerHTML = html;
   $("#filter").onchange = (e) => { app.filter = e.target.value; renderGroups(); };
   $("#rescan").onclick = () => { app.view = "scan"; render(); };
   $("#dryrun").onclick = () => { flushSave().then(() => startJob("/api/dryrun")); };
@@ -476,6 +485,9 @@ function bind(view) {
     if (f.twoStepMethod) f.twoStepMethod.onchange = () => { app.login.method = f.twoStepMethod.value; };
     if (f.url) f.url.oninput = () => { app.login.url = f.url.value; };
     f.onsubmit = (e) => { e.preventDefault(); doLogin(f); };
+    f.password.oninput = () => { app.login.pw = f.password.value; };
+    if (f.email) f.email.oninput = () => { app.login.email = f.email.value; };
+    if (f.clientId) f.clientId.oninput = () => { app.login.clientId = f.clientId.value; };
   }
   document.querySelectorAll("input[name=match]").forEach((r) => r.onchange = () => { app.match = r.value; render(); });
   on("#scan", "onclick", () => startJob("/api/scan", { match: app.match }));
