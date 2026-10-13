@@ -138,7 +138,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// shows before it is opened.
 	snap, _ := client.Snapshot()
 	s.mu.Lock()
-	s.folders = nil
+	s.folders, s.snap = nil, snap
 	if snap != nil {
 		dir := snap.Directory()
 		s.folders = dedupe.Folders(snap.Items, dir)
@@ -166,7 +166,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := s.client
-	s.client, s.account, s.folders = nil, nil, nil
+	s.client, s.account, s.folders, s.snap = nil, nil, nil, nil
 	s.mu.Unlock()
 	if c != nil {
 		c.Close()
@@ -221,6 +221,7 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Match       dedupe.Match `json:"match"`
 		SkipFolders []string     `json:"skipFolders"`
+		Reuse       bool         `json:"reuse"` // group the vault as last read, without reading again
 	}
 	_ = readJSON(r, &req)
 	if req.Match != dedupe.MatchDomain {
@@ -233,21 +234,29 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 		s.mu.Unlock()
 	}
 	s.startJob(w, "scan", func(c Backend, j *Job) error {
-		snap, err := syncAndRead(c, j)
-		if err != nil {
-			return err
+		s.mu.Lock()
+		snap := s.snap
+		s.mu.Unlock()
+		if !req.Reuse || snap == nil {
+			var err error
+			if snap, err = syncAndRead(c, j); err != nil {
+				return err
+			}
 		}
 		j.set(func(j *Job) { j.Phase = "group" })
 		dir := snap.Directory()
 		folders := dedupe.Folders(snap.Items, dir)
 		s.mu.Lock()
 		dir.Skip = s.prefs.skipSet(folders)
-		s.folders = folders
+		s.folders, s.snap = folders, snap
 		s.mu.Unlock()
 		plan := dedupe.BuildPlan(snap.Items, dir, req.Match)
 		s.mu.Lock()
 		if s.account != nil {
 			plan.Account = s.account.Email
+		}
+		if old := s.plan; old != nil && old.Account == plan.Account {
+			plan.CarryOver(old)
 		}
 		s.plan = plan
 		s.mu.Unlock()
@@ -358,6 +367,10 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.startJob(w, "apply", func(c Backend, j *Job) error {
+		// the vault changes now; the next scan must read it again
+		s.mu.Lock()
+		s.snap = nil
+		s.mu.Unlock()
 		plan := s.currentPlan()
 		if plan == nil {
 			return errors.New("no plan")

@@ -334,6 +334,37 @@ func IsTrashFolder(name string) bool {
 	return trashFolders[strings.ToLower(strings.TrimSpace(name))]
 }
 
+// CarryOver keeps the user's choices for groups that are unchanged: same
+// entries as a group of the old plan. Other groups keep their proposal.
+func (p *Plan) CarryOver(old *Plan) {
+	key := func(g *PlanGroup) string {
+		ids := make([]string, len(g.Entries))
+		for i, e := range g.Entries {
+			ids[i] = e.ID
+		}
+		sort.Strings(ids)
+		return strings.Join(ids, ",")
+	}
+	before := map[string]*PlanGroup{}
+	for _, g := range old.Groups {
+		before[key(g)] = g
+	}
+	for _, g := range p.Groups {
+		o := before[key(g)]
+		if o == nil {
+			continue
+		}
+		include := map[string]bool{}
+		for _, e := range o.Entries {
+			include[e.ID] = e.Include
+		}
+		for _, e := range g.Entries {
+			e.Include = include[e.ID]
+		}
+		g.Active, g.Keeper, g.NewName, g.PasswordFrom = o.Active, o.Keeper, o.NewName, o.PasswordFrom
+	}
+}
+
 // ApplyDecisions copies the user's choices from a posted plan onto the
 // server-side plan. Groups and entries themselves cannot be changed this way.
 func (p *Plan) ApplyDecisions(posted *Plan) {

@@ -54,11 +54,14 @@ type Server struct {
 	prefsFile  string
 	prefs      prefs
 	folders    []dedupe.FolderInfo
-	account    *account
-	plan       *dedupe.Plan
-	job        *Job
-	download   *downloadState
-	lastSeen   time.Time
+	// snap is the vault as last read, kept in memory only (never on
+	// disk) so changed scan settings can be applied without reading again.
+	snap     *bw.Snapshot
+	account  *account
+	plan     *dedupe.Plan
+	job      *Job
+	download *downloadState
+	lastSeen time.Time
 }
 
 type account struct {

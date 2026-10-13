@@ -197,10 +197,8 @@ func FindGroups(items []Item, match Match) []Group {
 		}
 		pw := pwHash(it.Password())
 		if it.Type() == TypeLogin && len(hosts) > 0 {
-			// Same host and username is a duplicate. Across subdomains
-			// (match by domain) the password must match too: the same
-			// username on audio.example.com and tools.example.com with
-			// different passwords are different accounts.
+			// Same host and username is a duplicate. By domain, the same
+			// username on any subdomain is one too.
 			for s := range hosts {
 				switch {
 				case user != "":
@@ -209,11 +207,12 @@ func FindGroups(items []Item, match Match) []Group {
 					add(key{ReasonSitePW, s, pw, ""}, it.ID())
 				}
 			}
-			if match == MatchDomain && pw != "" {
+			if match == MatchDomain {
 				for s := range domains {
-					if user != "" {
-						add(key{ReasonSite, "domain:" + s, user, pw}, it.ID())
-					} else {
+					switch {
+					case user != "":
+						add(key{ReasonSite, "domain:" + s, user, ""}, it.ID())
+					case pw != "":
 						add(key{ReasonSitePW, "domain:" + s, pw, ""}, it.ID())
 					}
 				}
