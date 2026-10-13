@@ -121,7 +121,20 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		last.Email = ""
 	}
 	_ = saveJSON(s.loginFile, last)
+	// A saved plan may come from an older version or the vault may have
+	// changed since; refresh what the review shows before it is opened.
+	var snap *bw.Snapshot
 	s.mu.Lock()
+	hasPlan := s.plan != nil && s.plan.Account == email
+	s.mu.Unlock()
+	if hasPlan {
+		snap, _ = client.Snapshot()
+	}
+	s.mu.Lock()
+	if snap != nil && s.plan != nil {
+		s.plan.Refresh(snap.Items, snap.Directory())
+		_ = savePlan(s.planFile, s.plan)
+	}
 	s.account = &account{Email: email, Server: st.ServerURL, Fast: fast}
 	s.lastLogin = last
 	s.mu.Unlock()

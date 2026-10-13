@@ -210,31 +210,54 @@ func BuildPlan(items []Item, dir Directory, match Match) *Plan {
 		}
 		labels := PWLabels(g.Items)
 		for i, it := range g.Items {
-			var colls []string
-			for _, c := range it.CollectionIDs() {
-				name := dir.Collections[c]
-				if name == "" {
-					name = "?"
-				}
-				colls = append(colls, name)
-			}
-			owner := ""
-			if it.OrgID() != "" {
-				owner = dir.Orgs[it.OrgID()]
-				if owner == "" {
-					owner = "?"
-				}
-			}
-			pg.Entries = append(pg.Entries, &PlanEntry{
-				ID: it.ID(), Include: true, Name: it.Name(), Owner: owner,
-				Folder: dir.Folders[it.FolderID()], Username: it.Username(),
-				Collections: nonNil(colls), PW: labels[i], Hosts: nonNil(hostList(it)),
-				Features: features(it), Revision: it.RevisionDate(),
-			})
+			e := &PlanEntry{ID: it.ID(), Include: true, PW: labels[i], Revision: it.RevisionDate()}
+			e.describe(it, dir)
+			pg.Entries = append(pg.Entries, e)
 		}
 		plan.Groups = append(plan.Groups, pg)
 	}
 	return plan
+}
+
+// describe fills the display fields of an entry from the item.
+func (e *PlanEntry) describe(it Item, dir Directory) {
+	var colls []string
+	for _, c := range it.CollectionIDs() {
+		name := dir.Collections[c]
+		if name == "" {
+			name = "?"
+		}
+		colls = append(colls, name)
+	}
+	owner := ""
+	if it.OrgID() != "" {
+		owner = dir.Orgs[it.OrgID()]
+		if owner == "" {
+			owner = "?"
+		}
+	}
+	e.Name, e.Owner, e.Folder, e.Username = it.Name(), owner, dir.Folders[it.FolderID()], it.Username()
+	e.Collections, e.Hosts, e.Features = nonNil(colls), nonNil(hostList(it)), features(it)
+}
+
+// Refresh updates what the review shows (name, folder, username, ...) from
+// the current vault. Decisions, password labels and the revision the plan
+// was made from stay, so a changed item is still detected before merging.
+// It also fills fields that plans of older versions did not have.
+func (p *Plan) Refresh(items []Item, dir Directory) {
+	byID := map[string]Item{}
+	for _, it := range items {
+		if !it.Deleted() {
+			byID[it.ID()] = it
+		}
+	}
+	for _, g := range p.Groups {
+		for _, e := range g.Entries {
+			if it, ok := byID[e.ID]; ok {
+				e.describe(it, dir)
+			}
+		}
+	}
 }
 
 // ApplyDecisions copies the user's choices from a posted plan onto the

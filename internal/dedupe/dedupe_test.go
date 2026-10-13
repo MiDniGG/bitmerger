@@ -227,3 +227,22 @@ func TestSelftestOnFake(t *testing.T) {
 		}
 	}
 }
+
+func TestRefreshFillsDisplayFieldsKeepsRevision(t *testing.T) {
+	items := []Item{
+		withRev(login("a", "Shop", "me", "x", "https://shop.example"), "r1"),
+		withRev(login("b", "Shop", "me", "x", "https://shop.example"), "r1"),
+	}
+	items[0]["folderId"] = "f1"
+	plan := BuildPlan(items, Directory{}, MatchHost)
+	e := plan.Groups[0].Entries[0]
+	e.Folder, e.Username = "", "" // like a plan saved by an older version
+	items[0]["revisionDate"] = "r2"
+	plan.Refresh(items, Directory{Folders: map[string]string{"f1": "Backup"}})
+	if e.Folder != "Backup" || e.Username != "me" {
+		t.Fatalf("folder %q username %q", e.Folder, e.Username)
+	}
+	if e.Revision != "r1" {
+		t.Fatalf("revision changed to %q", e.Revision)
+	}
+}
