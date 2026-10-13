@@ -383,8 +383,9 @@ function viewScan() {
       ${choice("host")}${choice("domain")}
       ${viewFolders(running)}
       <p class="muted">${esc(t("always_rule"))}</p>
-      <div class="row" style="margin-top:14px"><button class="btn" id="scan" ${running ? "disabled" : ""}>${scanning ? '<span class="spinner"></span>' : ""}${esc(scanning ? t("scan_running") : t("scan_button"))}</button>
-      ${app.plan ? `<button class="btn secondary" id="toReview" ${running ? "disabled" : ""}>${esc(t("back_review"))}</button>` : ""}</div></div>
+      <div class="row" style="margin-top:14px"><button class="btn" id="scan" ${running ? "disabled" : ""}>${scanning ? '<span class="spinner"></span>' : ""}${esc(scanning ? t("scan_running") : t(app.plan ? "scan_again_button" : "scan_button"))}</button>
+      ${app.plan ? `<button class="btn secondary" id="toReview" ${running ? "disabled" : ""}>${esc(t("back_review"))}</button>` : ""}</div>
+      ${app.plan ? `<p class="muted" style="margin:10px 0 0">${esc(t("scan_again_hint"))}</p>` : ""}</div>
     <div class="panel"><h2>${esc(t("selftest_title"))}</h2><p>${esc(t("selftest_text"))}</p>${selftestResult()}
       <div class="row" style="margin-top:12px"><button class="btn secondary" id="selftest" ${running ? "disabled" : ""}>${testing ? '<span class="spinner"></span>' : ""}${esc(testing ? t("phase_selftest") : t("selftest_button"))}</button></div></div>`;
 }
