@@ -111,10 +111,16 @@ function startJob(path, body) {
   });
 }
 
+// The field shows a fixed "https://"; a pasted full URL is accepted as well.
+function serverURL(v) {
+  v = v.trim().replace(/\/+$/, "");
+  return /^https?:\/\//i.test(v) ? v : "https://" + v;
+}
+
 async function doLogin(form) {
   const l = app.login;
   const req = {};
-  req.server = l.server === "self" ? form.url.value.trim() : SERVERS[l.server];
+  req.server = l.server === "self" ? serverURL(form.url.value) : SERVERS[l.server];
   if (l.tab === "apikey") {
     req.clientId = form.clientId.value.trim();
     req.clientSecret = form.clientSecret.value.trim();
@@ -283,7 +289,7 @@ function viewLogin() {
   return `<form class="panel narrow" id="loginForm" autocomplete="off"><h2>${esc(t("login_title"))}</h2><p>${esc(t("login_text"))}</p>
     <label class="field"><span>${esc(t("server"))}</span><select name="server">
       ${["us", "eu", "self"].map((k) => `<option value="${k}" ${l.server === k ? "selected" : ""}>${esc(t("server_" + k))}</option>`).join("")}</select></label>
-    ${l.server === "self" ? `<label class="field"><span>${esc(t("server_url"))}</span><input type="url" name="url" placeholder="https://vault.example.com" required></label>` : ""}
+    ${l.server === "self" ? `<label class="field"><span>${esc(t("server_url"))}</span><div class="prefixed"><span>https://</span><input type="text" name="url" placeholder="vault.example.com" required autocapitalize="off" spellcheck="false"></div></label>` : ""}
     <div class="tabs">${tab("password")}${tab("apikey")}</div>
     ${l.tab === "apikey" ? `<p class="muted">${esc(t("apikey_hint"))}</p>
       <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" required></label>
