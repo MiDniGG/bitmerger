@@ -257,7 +257,14 @@ function render() {
   const order = ["setup", "login", "scan", "review", "merge"];
   const stepOf = { setup: "setup", login: "login", scan: "scan", review: "review", dryrun: "merge", merge: "merge", loading: "setup" };
   const cur = order.indexOf(stepOf[view]);
-  $("#steps").innerHTML = order.map((k, i) => `<span class="${i === cur ? "on" : i < cur ? "done" : ""}">${i < cur ? "✓ " : ""}${esc(t("step_" + k))}</span>`).join("");
+  // "Suchen" and "Prüfen" can be opened directly once logged in.
+  const canOpen = (k) => s && s.account && !busy() && view !== k && (k === "scan" || (k === "review" && app.plan));
+  const stepsHTML = order.map((k, i) => {
+    const cls = i === cur ? "on" : i < cur ? "done" : "";
+    const label = `${i < cur ? "✓ " : ""}${esc(t("step_" + k))}`;
+    return canOpen(k) ? `<button type="button" class="${cls}" data-step="${k}">${label}</button>` : `<span class="${cls}">${label}</span>`;
+  }).join("");
+  if ($("#steps").dataset.html !== stepsHTML) { $("#steps").dataset.html = stepsHTML; $("#steps").innerHTML = stepsHTML; }
   $("#foot").textContent = s ? t("foot", { version: s.version, bw: s.bwVersion }) : "";
 
   // busy banner
@@ -625,6 +632,11 @@ function bind(view) {
 
 $("#lang").onclick = () => { setLang(LANG === "de" ? "en" : "de"); $("#main").dataset.view = ""; render(); };
 $("#quit").onclick = quit;
+$("#steps").onclick = (e) => {
+  const b = e.target.closest("button[data-step]");
+  if (!b) return;
+  flushSave().then(() => { app.view = b.dataset.step; render(); });
+};
 $("#logout").onclick = () => run(async () => { await api("POST", "/api/logout"); app.plan = null; app.view = null; app.server = await api("GET", "/api/state"); $("#main").dataset.view = ""; });
 
 setLang(LANG);

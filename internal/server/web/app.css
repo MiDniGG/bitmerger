@@ -6,9 +6,11 @@ button,input,select{font:inherit;color:inherit}
 .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 20px;background:var(--card);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:8px;font-weight:650;font-size:16px}
 .steps{display:flex;gap:4px;flex-wrap:wrap}
-.steps span{padding:3px 10px;border-radius:999px;color:var(--muted);font-size:13px}
-.steps span.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
-.steps span.done{color:var(--ok)}
+.steps span,.steps button{padding:3px 10px;border-radius:999px;color:var(--muted);font-size:13px;font-family:inherit;line-height:inherit;border:0;background:none}
+.steps .on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.steps .done{color:var(--ok)}
+.steps button{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px}
+.steps button:hover{background:var(--accent-soft);text-decoration-color:currentColor}
 .spacer{flex:1}
 .account{color:var(--muted);font-size:13px}
 main{max-width:1180px;margin:0 auto;padding:20px 20px 120px}
