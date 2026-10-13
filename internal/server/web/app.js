@@ -133,7 +133,7 @@ async function doLogin(form) {
       l.twoStep = res.message || "";
     } else {
       l.twoStep = null;
-      l.pw = "";
+
       app.server = await api("GET", "/api/state");
       if (app.server.hasPlan) await loadPlan();
     }
@@ -223,8 +223,32 @@ function render() {
   const html = (app.error ? `<div class="msg err">${esc(app.error)}</div>` : "") + views[view]();
   if (html === app.lastHTML && $("#main").dataset.view === view) return;
   app.lastHTML = html;
+  const kept = keepInputs();
   $("#main").innerHTML = html;
+  restoreInputs(kept);
   bind(view);
+}
+
+function keepInputs() {
+  const values = {};
+  $("#main").querySelectorAll("input[name]:not([type=radio]):not([type=checkbox])").forEach((el) => { values[el.name] = el.value; });
+  const a = document.activeElement;
+  const focus = a && a.name && $("#main").contains(a) ? { name: a.name, start: a.selectionStart, end: a.selectionEnd } : null;
+  return { values, focus };
+}
+
+function restoreInputs(kept) {
+  for (const [name, value] of Object.entries(kept.values)) {
+    const el = $("#main").querySelector(`input[name="${name}"]`);
+    if (el && !el.value) el.value = value;
+  }
+  if (kept.focus) {
+    const el = $("#main").querySelector(`[name="${kept.focus.name}"]`);
+    if (el) {
+      el.focus();
+      try { if (kept.focus.start != null) el.setSelectionRange(kept.focus.start, kept.focus.end); } catch (e) { /* not a text field */ }
+    }
+  }
 }
 
 function busyText() {
@@ -259,13 +283,13 @@ function viewLogin() {
   return `<form class="panel narrow" id="loginForm" autocomplete="off"><h2>${esc(t("login_title"))}</h2><p>${esc(t("login_text"))}</p>
     <label class="field"><span>${esc(t("server"))}</span><select name="server">
       ${["us", "eu", "self"].map((k) => `<option value="${k}" ${l.server === k ? "selected" : ""}>${esc(t("server_" + k))}</option>`).join("")}</select></label>
-    ${l.server === "self" ? `<label class="field"><span>${esc(t("server_url"))}</span><input type="url" name="url" value="${esc(l.url)}" placeholder="https://vault.example.com" required></label>` : ""}
+    ${l.server === "self" ? `<label class="field"><span>${esc(t("server_url"))}</span><input type="url" name="url" placeholder="https://vault.example.com" required></label>` : ""}
     <div class="tabs">${tab("password")}${tab("apikey")}</div>
     ${l.tab === "apikey" ? `<p class="muted">${esc(t("apikey_hint"))}</p>
-      <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" value="${esc(l.clientId || "")}" required></label>
+      <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" required></label>
       <label class="field"><span>${esc(t("client_secret"))}</span><input type="password" name="clientSecret" required></label>`
-      : `<label class="field"><span>${esc(t("email"))}</span><input type="email" name="email" value="${esc(l.email)}" required autocomplete="username"></label>`}
-    <label class="field"><span>${esc(t("master_password"))}</span><input type="password" name="password" value="${esc(l.pw || "")}" required autocomplete="current-password"></label>
+      : `<label class="field"><span>${esc(t("email"))}</span><input type="email" name="email" required autocomplete="username"></label>`}
+    <label class="field"><span>${esc(t("master_password"))}</span><input type="password" name="password" required autocomplete="current-password"></label>
     ${l.twoStep !== null && l.tab === "password" ? `<div class="msg info"><b>${esc(t("twostep_title"))}</b>${l.twoStep ? "<br>" + esc(l.twoStep) : ""}<br>${esc(t("twostep_email_hint"))}</div>
       <div class="row"><label class="field" style="flex:1"><span>${esc(t("twostep_method"))}</span><select name="twoStepMethod">
         ${["0", "1", "3"].map((m) => `<option value="${m}" ${l.method === m ? "selected" : ""}>${esc(t("method_" + m))}</option>`).join("")}</select></label>
@@ -483,11 +507,9 @@ function bind(view) {
     f.server.onchange = () => { app.login.server = f.server.value; render(); };
     f.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { app.login.tab = b.dataset.tab; app.login.twoStep = null; render(); });
     if (f.twoStepMethod) f.twoStepMethod.onchange = () => { app.login.method = f.twoStepMethod.value; };
-    if (f.url) f.url.oninput = () => { app.login.url = f.url.value; };
+
     f.onsubmit = (e) => { e.preventDefault(); doLogin(f); };
-    f.password.oninput = () => { app.login.pw = f.password.value; };
-    if (f.email) f.email.oninput = () => { app.login.email = f.email.value; };
-    if (f.clientId) f.clientId.oninput = () => { app.login.clientId = f.clientId.value; };
+
   }
   document.querySelectorAll("input[name=match]").forEach((r) => r.onchange = () => { app.match = r.value; render(); });
   on("#scan", "onclick", () => startJob("/api/scan", { match: app.match }));
