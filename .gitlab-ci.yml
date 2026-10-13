@@ -1,0 +1,20 @@
+# Mirror of github.com/MiDniGG/bitmerger. Releases are built on GitHub.
+stages: [test, build]
+
+test:
+  stage: test
+  image: golang:1.24
+  script:
+    - test -z "$(gofmt -l .)"
+    - go vet ./...
+    - go test ./...
+
+build:
+  stage: build
+  image: golang:1.24
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - ./scripts/build.sh "$CI_COMMIT_TAG"
+  artifacts:
+    paths: [dist/]

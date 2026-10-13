@@ -1,0 +1,6 @@
+/dist/
+/bitmerger
+*.exe
+.DS_Store
+.claude/time-track/
+.claude/playwright-mcp/
