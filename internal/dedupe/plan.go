@@ -1,7 +1,6 @@
 package dedupe
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -52,7 +51,8 @@ type PlanEntry struct {
 	Folder      string    `json:"folder"`
 	Username    string    `json:"username"`
 	Collections []string  `json:"collections"`
-	PW          string    `json:"pw"` // P1, P2 ... or "-"
+	PW          string    `json:"pw"` // A, B ... or "-"
+	PWChanged   string    `json:"pwChanged,omitempty"`
 	Hosts       []string  `json:"hosts"`
 	Features    []Feature `json:"features"`
 	Revision    string    `json:"revision"`
@@ -95,7 +95,17 @@ func Scope(items []Item) string {
 	}
 }
 
-// PWLabels gives each distinct password of a group a label (P1, P2, ...).
+// pwLetter turns 0, 1, ... into A, B, ..., Z, AA, AB, ...
+func pwLetter(n int) string {
+	s := ""
+	for n >= 0 {
+		s = string(rune('A'+n%26)) + s
+		n = n/26 - 1
+	}
+	return s
+}
+
+// PWLabels gives each distinct password of a group a label (A, B, ...).
 func PWLabels(items []Item) []string {
 	labels := map[string]string{}
 	out := make([]string, len(items))
@@ -106,7 +116,7 @@ func PWLabels(items []Item) []string {
 			continue
 		}
 		if _, ok := labels[h]; !ok {
-			labels[h] = fmt.Sprintf("P%d", len(labels)+1)
+			labels[h] = pwLetter(len(labels))
 		}
 		out[i] = labels[h]
 	}
@@ -241,6 +251,7 @@ func (e *PlanEntry) describe(it Item, dir Directory) {
 	}
 	e.Name, e.Owner, e.Folder, e.Username = it.Name(), owner, dir.Folders[it.FolderID()], it.Username()
 	e.Collections, e.Hosts, e.Features = nonNil(colls), nonNil(hostList(it)), features(it)
+	e.PWChanged, _ = it.Login()["passwordRevisionDate"].(string)
 }
 
 // FolderInfo is a folder as the scan page lists it.

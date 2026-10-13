@@ -73,7 +73,7 @@ const TEXTS = {
     help_keep: "Keep",
     help_keep_text: "this entry stays and receives URLs, notes, fields and attachments of the others. The others are then deleted (Bitwarden trash, restorable for 30 days).",
     help_password: "Password",
-    help_password_text: "this password stays. The others go into the password history. Same label (P1 and P1) = same password.",
+    help_password_text: "this password stays. The others go into the password history. Same letter = same password; the letters say nothing about age.",
     help_saved: "Changes are saved automatically.",
     count_one: "{a} of {n} account selected",
     tip_with: "Take part in the merge",
@@ -100,6 +100,8 @@ const TEXTS = {
     dry_trash: "{n} duplicates go to the Bitwarden trash.",
     dry_trash_one: "1 duplicate goes to the Bitwarden trash.",
     dryrun_title: "Dry run",
+    pw_name: "Password {l}",
+    pw_changed: "Password changed {d}",
   },
   de: {
     quit: "Beenden", logout: "Abmelden", lang_switch: "EN",
@@ -174,7 +176,7 @@ const TEXTS = {
     help_keep: "Behalten",
     help_keep_text: "dieser Eintrag bleibt und bekommt URLs, Notizen, Felder und Anhänge der anderen. Die anderen werden danach gelöscht (Bitwarden-Papierkorb, 30 Tage wiederherstellbar).",
     help_password: "Passwort",
-    help_password_text: "dieses Passwort gilt danach. Die anderen kommen in die Passwort-Historie. Gleiche Kennung (P1 und P1) = gleiches Passwort.",
+    help_password_text: "dieses Passwort gilt danach. Die anderen kommen in die Passwort-Historie. Gleicher Buchstabe = gleiches Passwort; über das Alter sagen die Buchstaben nichts.",
     help_saved: "Änderungen werden automatisch gespeichert.",
     count_one: "{a} von {n} Konto ausgewählt",
     tip_with: "Wird mit zusammengeführt",
@@ -201,6 +203,8 @@ const TEXTS = {
     dry_trash: "{n} Duplikate kommen in den Bitwarden-Papierkorb.",
     dry_trash_one: "1 Duplikat kommt in den Bitwarden-Papierkorb.",
     dryrun_title: "Probelauf",
+    pw_name: "Passwort {l}",
+    pw_changed: "Passwort geändert am {d}",
   },
 };
 

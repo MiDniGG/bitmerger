@@ -514,6 +514,22 @@ function rerenderCard(el) {
 const EYE = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 const EYE_OFF = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20 20 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
+// Password labels are letters; plans saved by older versions still say P1, P2.
+function pwLetter(pw) {
+  const m = /^P(\d+)$/.exec(pw || "");
+  if (!m) return pw;
+  let n = Number(m[1]) - 1, s = "";
+  while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+  return s;
+}
+
+function pwBadge(e) {
+  const l = pwLetter(e.pw);
+  const idx = [...l].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1;
+  const tip = e.pwChanged ? ` title="${esc(t("pw_changed", { d: fmtDate(e.pwChanged) }))}"` : "";
+  return `<span class="pwtag c${idx % 6}"${tip}>${esc(t("pw_name", { l }))}</span>`;
+}
+
 function featureText(f) { return t("feat_" + f.kind, { n: f.count || 0 }); }
 
 function fillCard(el, g) {
@@ -525,6 +541,13 @@ function fillCard(el, g) {
   if (g.reasons.includes("name")) tags.push(`<span class="tag warn">${esc(t("reason_name"))}</span>`);
   for (const n of g.notes) tags.push(`<span class="tag warn">${esc(t("note_" + n))}</span>`);
   for (const b of blocked) tags.push(`<span class="tag err">${esc(b)}</span>`);
+  // columns that are empty for every entry of this card are left out
+  const show = {
+    folder: g.entries.some((e) => e.folder),
+    collections: g.entries.some((e) => e.collections.length),
+    extras: g.entries.some((e) => (e.features || []).length),
+  };
+  const cols = 8 + Object.values(show).filter(Boolean).length;
   const rows = g.entries.map((e) => {
     const r = app.reveal[e.id];
     const d = app.details[e.id];
@@ -534,17 +557,17 @@ function fillCard(el, g) {
     return `<tr class="entry${e.include ? "" : " excluded"}${d && d.open ? " open" : ""}" data-row="${esc(e.id)}" title="${esc(t("row_tip"))}">
       <td><input type="checkbox" data-include="${esc(e.id)}" ${e.include ? "checked" : ""}></td>
       <td><input type="radio" name="k${g.no}" data-keeper="${esc(e.id)}" ${g.keeper === e.id ? "checked" : ""} ${e.include ? "" : "disabled"}></td>
-      <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${esc(e.pw)}</label>${revealBtn}</div>
+      <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${e.pw === "-" ? "-" : pwBadge(e)}</label>${revealBtn}</div>
         ${r && r.state === "shown" ? `<code class="plain">${esc(r.value)}</code>` : ""}</td>
       <td class="ename">${esc(e.name)}</td>
-      <td>${esc(e.username || "-")}</td><td>${esc(e.owner || t("personal"))}</td><td>${esc(e.folder || "-")}</td><td>${esc(e.collections.join(", ") || "-")}</td>
-      <td>${esc(e.hosts.join(", ") || "-")}</td><td>${esc((e.features || []).map(featureText).join(", ") || "-")}</td><td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
-      ${d && d.open ? `<tr class="detail"><td></td><td colspan="10">${detailsHTML(d)}</td></tr>` : ""}`;
+      <td>${esc(e.username || "-")}</td><td>${esc(e.owner || t("personal"))}</td>${show.folder ? `<td>${esc(e.folder || "-")}</td>` : ""}${show.collections ? `<td>${esc(e.collections.join(", ") || "-")}</td>` : ""}
+      <td class="hosts">${esc(e.hosts.join(", ") || "-")}</td>${show.extras ? `<td class="extras">${esc((e.features || []).map(featureText).join(", ") || "-")}</td>` : ""}<td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
+      ${d && d.open ? `<tr class="detail"><td></td><td colspan="${cols - 1}">${detailsHTML(d)}</td></tr>` : ""}`;
   }).join("");
   el.innerHTML = `<div class="ghead"><label><input type="checkbox" data-active ${g.active ? "checked" : ""} ${blocked.length || busy() ? "disabled" : ""}> <b>${g.no}. ${esc(g.title)}</b></label>
       <span class="muted">${esc(t("scope_" + scope))}</span>${tags.join("")}</div>
     <div class="name"><span class="muted">${esc(t("name_after"))}</span><input type="text" data-name value="${esc(g.newName || "")}" placeholder="${esc(keeper.name || "")}"></div>
-    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th>${esc(t("col_owner"))}</th><th>${esc(t("col_folder"))}</th><th>${esc(t("col_collections"))}</th><th>${esc(t("col_hosts"))}</th><th>${esc(t("col_extras"))}</th><th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
+    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th>${esc(t("col_owner"))}</th>${show.folder ? `<th>${esc(t("col_folder"))}</th>` : ""}${show.collections ? `<th>${esc(t("col_collections"))}</th>` : ""}<th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
 
   const changed = (rerender = true) => { if (rerender) fillCard(el, g); renderReviewToolbar(); scheduleSave(); };
   el.querySelector("[data-active]").onchange = (ev) => { g.active = ev.target.checked; changed(); };
@@ -591,7 +614,7 @@ function stepHTML(s) {
   for (const c of s.changes || []) changes.push(changeText(c, s));
   const keep = [s.keeperOwner || t("personal")];
   if (s.keeperFolder) keep.push(t("in_folder", { folder: s.keeperFolder }));
-  if (s.pw) keep.push(t("pw_label", { pw: s.pw }));
+  if (s.pw && s.pw !== "-") keep.push(t("pw_label", { pw: pwLetter(s.pw) }));
   return `<div class="step">${title}
     <div>${esc(t("keeps", { name: s.keeperName }))} <span class="muted">${esc(keep.join(" · "))}</span></div>
     ${changes.length ? `<div>${esc(t("takes", { list: changes.join(", ") }))}</div>` : ""}
