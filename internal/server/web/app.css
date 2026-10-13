@@ -1,5 +1,5 @@
-:root{--bg:#f5f6f8;--card:#fff;--text:#1d2125;--muted:#667085;--line:#dde1e6;--accent:#175cd3;--accent-soft:#e8effc;--ok:#067647;--ok-soft:#e7f6ec;--warn:#b54708;--warn-soft:#fef4e6;--err:#b42318;--err-soft:#fdecea;--off:#98a2b3;--radius:10px}
-@media (prefers-color-scheme:dark){:root{--bg:#131518;--card:#1d2024;--text:#e6e8eb;--muted:#98a2b3;--line:#323840;--accent:#84adff;--accent-soft:#1f2b44;--ok:#47cd89;--ok-soft:#143024;--warn:#fdb022;--warn-soft:#3a2a10;--err:#f97066;--err-soft:#3b1a17;--off:#667085}}
+:root{--on-accent:#fff;--bg:#f5f6f8;--card:#fff;--text:#1d2125;--muted:#667085;--line:#dde1e6;--accent:#175cd3;--accent-soft:#e8effc;--ok:#067647;--ok-soft:#e7f6ec;--warn:#b54708;--warn-soft:#fef4e6;--err:#b42318;--err-soft:#fdecea;--off:#98a2b3;--radius:10px}
+@media (prefers-color-scheme:dark){:root{--on-accent:#0b1730;--bg:#131518;--card:#1d2024;--text:#e6e8eb;--muted:#98a2b3;--line:#323840;--accent:#84adff;--accent-soft:#1f2b44;--ok:#47cd89;--ok-soft:#143024;--warn:#fdb022;--warn-soft:#3a2a10;--err:#f97066;--err-soft:#3b1a17;--off:#667085}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 button,input,select{font:inherit;color:inherit}
@@ -19,12 +19,12 @@ main{max-width:1180px;margin:0 auto;padding:20px 20px 120px}
 .narrow{max-width:520px;margin:30px auto}
 label.field{display:block;margin:12px 0}
 label.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-input[type=text],input[type=email],input[type=password],input[type=url],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--card)}
+input[type=text],input[type=email],input[type=password],input[type=url],select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--card)}
 input:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:600;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:9px 18px;font-weight:600;cursor:pointer}
 .btn.secondary{background:var(--accent-soft);color:var(--accent)}
-.btn.danger{background:var(--err)}
+.btn.danger{background:var(--err);color:#fff}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 .ghost{background:none;border:1px solid var(--line);border-radius:7px;padding:5px 12px;cursor:pointer}
 .link{background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
@@ -38,7 +38,7 @@ input:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(-
 .msg.ok{background:var(--ok-soft);color:var(--ok)}
 .msg.info{background:var(--accent-soft);color:var(--accent)}
 .busy[hidden]{display:none}
-.busy{position:sticky;top:53px;z-index:4;display:flex;align-items:center;gap:10px;justify-content:center;padding:8px 16px;background:var(--accent);color:#fff;font-weight:550}
+.busy{position:sticky;top:53px;z-index:4;display:flex;align-items:center;gap:10px;justify-content:center;padding:8px 16px;background:var(--accent);color:var(--on-accent);font-weight:550}
 .spinner{width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .progress{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:10px 0}
@@ -80,3 +80,13 @@ tr.excluded td:not(:first-child){color:var(--off);text-decoration:line-through}
 @media (max-width:640px){.top{padding:8px 16px}main{padding:16px 16px 100px}.panel{padding:16px}.steps{display:none}}
 select,input[type=checkbox],input[type=radio],label.choice,.tabs button,button,.link{cursor:pointer}
 select:disabled,input:disabled,button:disabled{cursor:not-allowed}
+/* Native select arrows sit flush against the right border; draw our own with room around it. */
+select{appearance:none;-webkit-appearance:none;padding-right:38px;background-image:var(--chevron);background-repeat:no-repeat;background-position:right 14px center;background-size:12px 8px}
+:root{--chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23667085' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+@media (prefers-color-scheme:dark){:root{--chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2398a2b3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}}
+.toolbar label{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.toolbar select{width:auto;min-width:170px}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:16px;height:16px;margin:0;vertical-align:middle}
+.ghead label{display:inline-flex;align-items:center;gap:8px}
+.pw label{display:inline-flex;align-items:center;gap:6px}
+td{line-height:1.4}
