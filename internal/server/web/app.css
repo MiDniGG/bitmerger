@@ -48,15 +48,22 @@ input:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(-
 .choice{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin:8px 0;cursor:pointer}
 .choice.on{border-color:var(--accent);background:var(--accent-soft)}
 .choice small{display:block;color:var(--muted)}
-.folders{margin:14px 0 8px}
+.folders{margin:14px 0 8px;border:1px solid var(--line);border-radius:8px}
+.folders summary{padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;list-style:none}
+.folders summary::-webkit-details-marker{display:none}
+.folders summary::before{content:"";width:6px;height:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);margin-right:2px;align-self:center;transition:transform .15s}
+.folders[open] summary::before{transform:rotate(45deg)}
+.folders > small{display:block;padding:0 12px 8px}
 .folder-line{margin:8px 0 0;font-size:13px}
 .folder-line .link{margin-left:6px}
-.folders small{display:block;margin:2px 0 8px}
-.folder-list{display:flex;flex-wrap:wrap;gap:8px}
-.folder-list .check{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
-.folder-list .check input{margin:0;cursor:pointer}
-.folder-list .check.off{opacity:.6}
-.folder-list .tag{background:var(--warn-soft);color:var(--warn)}
+.folder-list{max-height:380px;overflow:auto;border-top:1px solid var(--line)}
+.folder-row{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.folder-row:last-child{border-bottom:0}
+.folder-row:hover{background:var(--accent-soft)}
+.folder-row input{margin:0;cursor:pointer;flex:none}
+.folder-row .fname{flex:1;min-width:0}
+.folder-row.off .fname{color:var(--off)}
+.folder-row .tag{background:var(--warn-soft);color:var(--warn)}
 .toolbar{position:sticky;top:53px;z-index:3;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--bg);padding:10px 0}
 .toolbar .count{color:var(--muted);font-size:13px;flex:1 1 220px;min-width:0}
 .toolbar .spacer{flex:0}

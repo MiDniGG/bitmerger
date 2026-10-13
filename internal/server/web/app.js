@@ -255,7 +255,8 @@ function render() {
   lo.hidden = !(s && s.account);
   lo.disabled = busy();
   $("#account").textContent = s && s.account ? s.account.email : "";
-  const order = ["setup", "login", "scan", "review", "merge"];
+  // Setup (downloading the CLI) is a step only while it is needed.
+  const order = (s && s.bwReady ? [] : ["setup"]).concat(["login", "scan", "review", "merge"]);
   const stepOf = { setup: "setup", login: "login", scan: "scan", review: "review", dryrun: "merge", merge: "merge", loading: "setup" };
   const cur = order.indexOf(stepOf[view]);
   // "Suchen" and "Prüfen" can be opened directly once logged in.
@@ -397,9 +398,21 @@ function viewFolders(running) {
   const folders = (app.server && app.server.folders) || [];
   if (!folders.length) return "";
   const skip = skippedFolders();
-  return `<div class="folders"><b>${esc(t("folders_title"))}</b><small class="muted">${esc(t("folders_hint"))}</small>
-    <div class="folder-list">${folders.map((f) => `<label class="check ${skip.has(f.id) ? "off" : ""}"><input type="checkbox" name="folder" value="${esc(f.id)}" ${skip.has(f.id) ? "" : "checked"} ${running ? "disabled" : ""}>
-      <span>${esc(f.name)}</span><span class="muted">${f.count}</span>${f.trash ? `<span class="tag">${esc(t("folder_trash"))}</span>` : ""}</label>`).join("")}</div></div>`;
+  const names = new Set(folders.map((f) => f.name));
+  const left = folders.filter((f) => skip.has(f.id));
+  const summary = left.length ? t("folders_searched", { list: left.map((f) => f.name).join(", ") }) : t("folders_none");
+  // nested folders ("a/b") are shown below their parent, indented
+  const row = (f) => {
+    const parts = f.name.split("/");
+    const parent = parts.slice(0, -1).join("/");
+    const depth = parent && names.has(parent) ? parts.length - 1 : 0;
+    const label = depth ? parts[parts.length - 1] : f.name;
+    return `<label class="folder-row ${skip.has(f.id) ? "off" : ""}" style="padding-left:${12 + depth * 22}px"><input type="checkbox" name="folder" value="${esc(f.id)}" ${skip.has(f.id) ? "" : "checked"} ${running ? "disabled" : ""}>
+      <span class="fname">${esc(label)}</span>${f.trash && label.toLowerCase() !== t("folder_trash").toLowerCase() ? `<span class="tag">${esc(t("folder_trash"))}</span>` : ""}<span class="muted">${f.count}</span></label>`;
+  };
+  return `<details class="folders" id="folders" ${app.foldersOpen ? "open" : ""}><summary><b>${esc(t("folders_title"))}</b> <span class="muted">${esc(summary)}</span></summary>
+    <small class="muted">${esc(t("folders_hint"))}</small>
+    <div class="folder-list">${folders.map(row).join("")}</div></details>`;
 }
 
 function selftestResult() {
@@ -616,6 +629,7 @@ function bind(view) {
 
   }
   document.querySelectorAll("input[name=match]").forEach((r) => r.onchange = () => { app.match = r.value; render(); });
+  on("#folders", "ontoggle", (e) => { app.foldersOpen = e.target.open; });
   document.querySelectorAll("input[name=folder]").forEach((c) => c.onchange = () => {
     const skip = new Set(skippedFolders());
     if (c.checked) skip.delete(c.value); else skip.add(c.value);
@@ -634,7 +648,7 @@ function bind(view) {
   if (view === "review") {
     renderReviewToolbar();
     renderGroups();
-    on("#changeFolders", "onclick", () => flushSave().then(() => { app.view = "scan"; render(); const f = $(".folders"); if (f) f.scrollIntoView({ block: "center" }); }));
+    on("#changeFolders", "onclick", () => flushSave().then(() => { app.view = "scan"; app.foldersOpen = true; render(); const f = $(".folders"); if (f) f.scrollIntoView({ block: "center" }); }));
   }
 }
 
