@@ -33,13 +33,14 @@ type Step struct {
 	Problem string   `json:"problem,omitempty"`
 	Names   []string `json:"names,omitempty"` // items the problem refers to
 
-	KeeperName  string   `json:"keeperName,omitempty"`
-	KeeperOwner string   `json:"keeperOwner,omitempty"`
-	PW          string   `json:"pw,omitempty"`
-	NewName     string   `json:"newName,omitempty"`
-	Changes     []Change `json:"changes,omitempty"`
-	Trash       []Trash  `json:"trash,omitempty"`
-	Warning     string   `json:"warning,omitempty"` // "org_items_deleted"
+	KeeperName   string   `json:"keeperName,omitempty"`
+	KeeperOwner  string   `json:"keeperOwner,omitempty"`
+	KeeperFolder string   `json:"keeperFolder,omitempty"`
+	PW           string   `json:"pw,omitempty"`
+	NewName      string   `json:"newName,omitempty"`
+	Changes      []Change `json:"changes,omitempty"`
+	Trash        []Trash  `json:"trash,omitempty"`
+	Warning      string   `json:"warning,omitempty"` // "org_items_deleted"
 
 	keeper      Item
 	others      []Item
@@ -59,8 +60,11 @@ type Change struct {
 }
 
 type Trash struct {
-	Name  string `json:"name"`
-	Owner string `json:"owner"`
+	Name     string `json:"name"`
+	Owner    string `json:"owner"`
+	Folder   string `json:"folder,omitempty"`
+	Username string `json:"username,omitempty"`
+	Revised  string `json:"revised,omitempty"`
 }
 
 // BuildSteps checks the plan against the current vault content.
@@ -175,7 +179,7 @@ func BuildSteps(plan *Plan, items []Item) []*Step {
 		}
 
 		s.keeper, s.others, s.merged, s.target, s.chain, s.expected = keeper, others, merged, target, chain, expected
-		s.KeeperName, s.KeeperOwner, s.PW = keeper.Name(), keeperEntry.Owner, ""
+		s.KeeperName, s.KeeperOwner, s.KeeperFolder, s.PW = keeper.Name(), keeperEntry.Owner, keeperEntry.Folder, ""
 		if pe := entry[g.PasswordFrom]; pe != nil {
 			s.PW = pe.PW
 		}
@@ -225,7 +229,8 @@ func BuildSteps(plan *Plan, items []Item) []*Step {
 			s.Changes = append(s.Changes, Change{Kind: n})
 		}
 		for _, o := range others {
-			s.Trash = append(s.Trash, Trash{Name: o.Name(), Owner: entry[o.ID()].Owner})
+			pe := entry[o.ID()]
+			s.Trash = append(s.Trash, Trash{Name: o.Name(), Owner: pe.Owner, Folder: pe.Folder, Username: o.Username(), Revised: o.RevisionDate()})
 		}
 	}
 	return steps

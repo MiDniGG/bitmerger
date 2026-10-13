@@ -210,7 +210,7 @@ function fmtDate(iso) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-const MATCH = { 0: "match_domain", 1: "match_host_rule", 2: "match_starts", 3: "match_exact", 4: "match_regex", 5: "match_never" };
+const MATCH = { 0: "um_domain", 1: "um_host", 2: "um_starts", 3: "um_exact", 4: "um_regex", 5: "um_never" };
 
 function detailsHTML(d) {
   if (d.state === "loading") return `<span class="muted"><span class="spinner" style="width:11px;height:11px"></span> ${esc(t("loading"))}</span>`;
@@ -220,7 +220,7 @@ function detailsHTML(d) {
   const flags = [x.totp && "TOTP", x.passkey && "Passkey", x.favorite && t("feat_favorite"), x.reprompt && t("reprompt")].filter(Boolean);
   return `<div class="details">
     ${row("d_username", esc(x.username || "-"))}
-    ${row("d_uris", x.uris.length ? x.uris.map((u) => `<div>${esc(u.uri)} <span class="muted">· ${esc(t(MATCH[u.match] || "match_default"))}</span></div>`).join("") : "-")}
+    ${row("d_uris", x.uris.length ? x.uris.map((u) => `<div>${esc(u.uri)} <span class="muted">· ${esc(t(MATCH[u.match] || "um_default"))}</span></div>`).join("") : "-")}
     ${row("d_created", x.created ? esc(fmtDate(x.created)) : "")}
     ${row("d_revised", x.revised ? esc(fmtDate(x.revised)) : "")}
     ${row("d_pw_revised", x.passwordRevised ? esc(fmtDate(x.passwordRevised)) : "")}
@@ -442,8 +442,10 @@ function viewReview() {
   if (!app.plan) return `<div class="panel"><p>…</p></div>`;
   const left = ((app.server && app.server.folders) || []).filter((f) => f.skip).map((f) => f.name);
   const folderLine = left.length ? t("folders_searched", { list: left.join(", ") }) : t("folders_none");
-  return `<div class="panel"><h2>${esc(t("review_title"))}</h2><p>${esc(t("review_help"))}</p><p class="muted">${esc(t("pw_legend"))}</p>
-    <p class="folder-line">${esc(folderLine)} <button class="link" id="changeFolders" type="button">${esc(t("folders_change"))}</button></p></div>
+  const help = (k) => `<li><b>${esc(t("help_" + k))}:</b> ${esc(t("help_" + k + "_text"))}</li>`;
+  return `<div class="panel intro"><h2>${esc(t("review_title"))}</h2><p>${esc(t("review_help"))}</p>
+    <ul>${help("include")}${help("keep")}${help("password")}</ul>
+    <p>${esc(t("help_saved"))} ${esc(folderLine)} <button class="link" id="changeFolders" type="button">${esc(t("folders_change"))}</button></p></div>
     <div class="toolbar" id="toolbar"></div>
     <div id="groups">${app.plan.groups.length ? "" : `<div class="panel"><p>${esc(t("no_groups"))}</p></div>`}</div>`;
 }
@@ -456,7 +458,7 @@ function renderReviewToolbar() {
   const running = busy();
   const dry = jobRunning() && app.server.job.kind === "dryrun";
   const html = `${app.error ? `<div class="msg err" style="flex-basis:100%">${esc(app.error)}</div>` : ""}<label>${esc(t("show"))} <select id="filter">${["all", "active", "inactive"].map((k) => `<option value="${k}" ${app.filter === k ? "selected" : ""}>${esc(t("show_" + k))}</option>`).join("")}</select></label>
-    <span class="count">${esc(t("count", { a: act.length, n: app.plan.groups.length, t: trash }))}</span>
+    <span class="count">${esc(t("count", { a: act.length, n: app.plan.groups.length }))} · ${esc(t("count_del", { n: trash }))}</span>
     <span class="saved" id="saveState"></span><span class="spacer"></span>
     <button class="btn secondary" id="rescan" ${running ? "disabled" : ""}>${esc(t("rescan"))}</button>
     <button class="btn" id="dryrun" ${running || !act.length ? "disabled" : ""}>${dry ? '<span class="spinner"></span>' : ""}${esc(dry ? t("dryrun_running") : t("dryrun_button"))}</button>`;
@@ -509,6 +511,9 @@ function rerenderCard(el) {
   if (g) fillCard(el, g);
 }
 
+const EYE = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20 20 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
 function featureText(f) { return t("feat_" + f.kind, { n: f.count || 0 }); }
 
 function fillCard(el, g) {
@@ -524,14 +529,14 @@ function fillCard(el, g) {
     const r = app.reveal[e.id];
     const d = app.details[e.id];
     const revealBtn = e.pw === "-" ? "" : r && r.state === "loading"
-      ? `<button class="link" disabled><span class="spinner" style="width:11px;height:11px"></span> ${esc(t("loading"))}</button>`
-      : `<button class="link" data-reveal="${esc(e.id)}">${esc(r ? t("hide") : t("reveal"))}</button>`;
-    return `<tr class="${e.include ? "" : "excluded"}">
+      ? `<button class="icon" disabled aria-label="${esc(t("loading"))}"><span class="spinner" style="width:12px;height:12px;margin:0"></span></button>`
+      : `<button class="icon" data-reveal="${esc(e.id)}" title="${esc(r ? t("hide") : t("reveal"))}" aria-label="${esc(r ? t("hide") : t("reveal"))}">${r ? EYE_OFF : EYE}</button>`;
+    return `<tr class="entry${e.include ? "" : " excluded"}${d && d.open ? " open" : ""}" data-row="${esc(e.id)}" title="${esc(t("row_tip"))}">
       <td><input type="checkbox" data-include="${esc(e.id)}" ${e.include ? "checked" : ""}></td>
       <td><input type="radio" name="k${g.no}" data-keeper="${esc(e.id)}" ${g.keeper === e.id ? "checked" : ""} ${e.include ? "" : "disabled"}></td>
       <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${esc(e.pw)}</label>${revealBtn}</div>
         ${r && r.state === "shown" ? `<code class="plain">${esc(r.value)}</code>` : ""}</td>
-      <td><button class="link toggle" data-details="${esc(e.id)}" aria-expanded="${d && d.open ? "true" : "false"}"><span class="caret${d && d.open ? " open" : ""}"></span>${esc(e.name)}</button></td>
+      <td class="ename">${esc(e.name)}</td>
       <td>${esc(e.username || "-")}</td><td>${esc(e.owner || t("personal"))}</td><td>${esc(e.folder || "-")}</td><td>${esc(e.collections.join(", ") || "-")}</td>
       <td>${esc(e.hosts.join(", ") || "-")}</td><td>${esc((e.features || []).map(featureText).join(", ") || "-")}</td><td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
       ${d && d.open ? `<tr class="detail"><td></td><td colspan="10">${detailsHTML(d)}</td></tr>` : ""}`;
@@ -539,7 +544,7 @@ function fillCard(el, g) {
   el.innerHTML = `<div class="ghead"><label><input type="checkbox" data-active ${g.active ? "checked" : ""} ${blocked.length || busy() ? "disabled" : ""}> <b>${g.no}. ${esc(g.title)}</b></label>
       <span class="muted">${esc(t("scope_" + scope))}</span>${tags.join("")}</div>
     <div class="name"><span class="muted">${esc(t("name_after"))}</span><input type="text" data-name value="${esc(g.newName || "")}" placeholder="${esc(keeper.name || "")}"></div>
-    <div class="scroll"><table><tr><th>${esc(t("col_with"))}</th><th>${esc(t("col_keep"))}</th><th>${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th>${esc(t("col_owner"))}</th><th>${esc(t("col_folder"))}</th><th>${esc(t("col_collections"))}</th><th>${esc(t("col_hosts"))}</th><th>${esc(t("col_extras"))}</th><th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
+    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th>${esc(t("col_owner"))}</th><th>${esc(t("col_folder"))}</th><th>${esc(t("col_collections"))}</th><th>${esc(t("col_hosts"))}</th><th>${esc(t("col_extras"))}</th><th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
 
   const changed = (rerender = true) => { if (rerender) fillCard(el, g); renderReviewToolbar(); scheduleSave(); };
   el.querySelector("[data-active]").onchange = (ev) => { g.active = ev.target.checked; changed(); };
@@ -555,7 +560,11 @@ function fillCard(el, g) {
   el.querySelectorAll("[data-keeper]").forEach((x) => x.onchange = () => { g.keeper = x.dataset.keeper; changed(); });
   el.querySelectorAll("[data-pwfrom]").forEach((x) => x.onchange = () => { g.passwordFrom = x.dataset.pwfrom; changed(false); });
   el.querySelectorAll("[data-reveal]").forEach((x) => x.onclick = () => reveal(x.dataset.reveal, el));
-  el.querySelectorAll("[data-details]").forEach((x) => x.onclick = () => toggleDetails(x.dataset.details, el));
+  // the whole row opens the details; its controls keep their own meaning
+  el.querySelectorAll("tr[data-row]").forEach((tr) => tr.onclick = (ev) => {
+    if (ev.target.closest("input, button, label, a, code")) return;
+    toggleDetails(tr.dataset.row, el);
+  });
   el.querySelector("[data-name]").oninput = (ev) => { g.newName = ev.target.value.trim(); changed(false); };
 }
 
@@ -566,15 +575,27 @@ function changeText(c, step) {
   return t("ch_" + c.kind, { n: c.n || 0, from: c.from || 0, v: step.newName || "" });
 }
 
+// where an entry lives, e.g. "Personal · folder Backup · last edited 2026-01-21 18:00"
+function whereText(owner, folder, revised) {
+  const parts = [owner || t("personal")];
+  if (folder) parts.push(t("in_folder", { folder }));
+  if (revised) parts.push(t("edited", { d: fmtDate(revised) }));
+  return parts.join(" · ");
+}
+
 function stepHTML(s) {
-  if (s.problem) return `<div class="step"><div class="t">${s.no}. ${esc(s.title)}</div><div class="err">${esc(t("skipped", { why: t("pr_" + s.problem, { names: (s.names || []).join(", ") }) }))}</div></div>`;
+  const title = `<div class="t">${esc(s.title)}</div>`;
+  if (s.problem) return `<div class="step">${title}<div class="err">${esc(t("skipped", { why: t("pr_" + s.problem, { names: (s.names || []).join(", ") }) }))}</div></div>`;
   const changes = [];
   if (s.newName) changes.push(t("ch_name", { v: s.newName }));
   for (const c of s.changes || []) changes.push(changeText(c, s));
-  return `<div class="step"><div class="t">${s.no}. ${esc(s.title)}</div>
-    <div>${esc(t("keeps", { name: s.keeperName, owner: s.keeperOwner || t("personal"), pw: s.pw || "-" }))}</div>
-    ${changes.length ? `<div class="muted">+ ${esc(changes.join(" · "))}</div>` : ""}
-    ${(s.trash || []).map((x) => `<div class="muted">🗑 ${esc(t("trash", { name: x.name, owner: x.owner || t("personal") }))}</div>`).join("")}
+  const keep = [s.keeperOwner || t("personal")];
+  if (s.keeperFolder) keep.push(t("in_folder", { folder: s.keeperFolder }));
+  if (s.pw) keep.push(t("pw_label", { pw: s.pw }));
+  return `<div class="step">${title}
+    <div>${esc(t("keeps", { name: s.keeperName }))} <span class="muted">${esc(keep.join(" · "))}</span></div>
+    ${changes.length ? `<div>${esc(t("takes", { list: changes.join(", ") }))}</div>` : ""}
+    ${(s.trash || []).map((x) => `<div>${esc(t("trash", { name: x.name }))} <span class="muted">${esc(whereText(x.owner, x.folder, x.revised))}</span></div>`).join("")}
     ${s.warning ? `<div class="msg warn">${esc(t("warn_" + s.warning))}</div>` : ""}</div>`;
 }
 
@@ -584,10 +605,25 @@ function dryCounts() {
   return { ok: ok.length, t: ok.reduce((n, s) => n + (s.trash || []).length, 0), s: steps.length - ok.length };
 }
 
+// Rough duration: every CLI call takes one to two seconds; a group needs one
+// edit per old password, the final edit, a check and one delete per duplicate.
+function mergeDuration() {
+  let calls = 4;
+  for (const s of (app.dryrun || []).filter((x) => !x.problem)) {
+    const hist = (s.changes || []).find((c) => c.kind === "history");
+    calls += 3 + (hist ? hist.n : 0) + (s.trash || []).length;
+  }
+  const min = Math.round((calls * 1.5) / 60);
+  return min < 1 ? t("dur_lt_minute") : t("dur_minutes", { n: min });
+}
+
+function summaryText(c) { return t("dry_merge", { n: c.ok }) + ", " + t("dry_trash", { n: c.t }); }
+
 function viewDryRun() {
   const c = dryCounts();
-  return `<div class="panel"><h2>${esc(t("dryrun_title"))}</h2><div class="msg info">${esc(t("dryrun_summary", c))}</div>
-      <div class="msg warn">${esc(t("merge_warn"))}</div>
+  return `<div class="panel"><h2>${esc(t("dryrun_title"))}</h2>
+      <div class="msg info">${esc(summaryText(c))}${c.s ? " " + esc(t("dryrun_skipped", { n: c.s })) : ""}</div>
+      ${c.ok ? `<div class="msg warn">${esc(t("merge_warn", { d: mergeDuration() }))}<br>${esc(t("merge_window"))}</div>` : ""}
       <div class="row"><button class="btn secondary" id="toReview">${esc(t("back_review"))}</button>
       <button class="btn" id="merge" ${busy() || !c.ok ? "disabled" : ""}>${esc(t("merge_button"))}</button></div></div>
     <div class="panel">${(app.dryrun || []).map(stepHTML).join("")}</div>`;
@@ -645,7 +681,7 @@ function bind(view) {
   on("#toReview", "onclick", async () => { if (!app.plan) await loadPlan(); app.view = "review"; render(); });
   on("#merge", "onclick", () => {
     const c = dryCounts();
-    if (confirm(t("merge_confirm", c))) { app.view = "merge"; startJob("/api/apply"); }
+    if (confirm(t("merge_confirm", { m: t("dry_merge", { n: c.ok }), d: t("dry_trash", { n: c.t }) }))) { app.view = "merge"; startJob("/api/apply"); }
   });
   on("#cancel", "onclick", (ev) => { ev.target.disabled = true; ev.target.textContent = t("cancel_requested"); api("POST", "/api/cancel").catch(() => {}); });
   on("#rescanAfter", "onclick", () => { app.view = "scan"; render(); });
