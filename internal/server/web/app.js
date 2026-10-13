@@ -557,17 +557,17 @@ function fillCard(el, g) {
     return `<tr class="entry${e.include ? "" : " excluded"}${d && d.open ? " open" : ""}" data-row="${esc(e.id)}" title="${esc(t("row_tip"))}">
       <td><input type="checkbox" data-include="${esc(e.id)}" ${e.include ? "checked" : ""}></td>
       <td><input type="radio" name="k${g.no}" data-keeper="${esc(e.id)}" ${g.keeper === e.id ? "checked" : ""} ${e.include ? "" : "disabled"}></td>
-      <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${e.pw === "-" ? "-" : pwBadge(e)}</label>${revealBtn}</div>
-        ${r && r.state === "shown" ? `<code class="plain">${esc(r.value)}</code>` : ""}</td>
       <td class="ename">${esc(e.name)}</td>
-      <td>${esc(e.username || "-")}</td><td>${esc(e.owner || t("personal"))}</td>${show.folder ? `<td>${esc(e.folder || "-")}</td>` : ""}${show.collections ? `<td>${esc(e.collections.join(", ") || "-")}</td>` : ""}
+      <td>${esc(e.username || "-")}</td>
+      <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${e.pw === "-" ? "-" : r && r.state === "shown" ? `<code class="plain inline" title="${esc(r.value)}">${esc(r.value)}</code>` : pwBadge(e)}</label>${revealBtn}</div></td>
+      <td>${esc(e.owner || t("personal"))}</td>${show.folder ? `<td>${esc(e.folder || "-")}</td>` : ""}${show.collections ? `<td>${esc(e.collections.join(", ") || "-")}</td>` : ""}
       <td class="hosts">${esc(e.hosts.join(", ") || "-")}</td>${show.extras ? `<td class="extras">${esc((e.features || []).map(featureText).join(", ") || "-")}</td>` : ""}<td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
       ${d && d.open ? `<tr class="detail"><td></td><td colspan="${cols - 1}">${detailsHTML(d)}</td></tr>` : ""}`;
   }).join("");
   el.innerHTML = `<div class="ghead"><label><input type="checkbox" data-active ${g.active ? "checked" : ""} ${blocked.length || busy() ? "disabled" : ""}> <b>${g.no}. ${esc(g.title)}</b></label>
       <span class="muted">${esc(t("scope_" + scope))}</span>${tags.join("")}</div>
     <div class="name"><span class="muted">${esc(t("name_after"))}</span><input type="text" data-name value="${esc(g.newName || "")}" placeholder="${esc(keeper.name || "")}"></div>
-    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th>${esc(t("col_owner"))}</th>${show.folder ? `<th>${esc(t("col_folder"))}</th>` : ""}${show.collections ? `<th>${esc(t("col_collections"))}</th>` : ""}<th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
+    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th>${esc(t("col_owner"))}</th>${show.folder ? `<th>${esc(t("col_folder"))}</th>` : ""}${show.collections ? `<th>${esc(t("col_collections"))}</th>` : ""}<th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
 
   const changed = (rerender = true) => { if (rerender) fillCard(el, g); renderReviewToolbar(); scheduleSave(); };
   el.querySelector("[data-active]").onchange = (ev) => { g.active = ev.target.checked; changed(); };

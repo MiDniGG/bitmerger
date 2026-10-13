@@ -327,12 +327,34 @@ func (s *Server) handlePassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "unknown item")
 		return
 	}
+	// The vault as last read is in memory anyway; answering from it is
+	// instant, while the CLI needs seconds per item.
+	if it, ok := s.cachedItem(id); ok {
+		writeJSON(w, map[string]string{"password": it.Password()})
+		return
+	}
 	pw, err := c.Password(id)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
 	writeJSON(w, map[string]string{"password": pw})
+}
+
+// cachedItem finds an item in the vault as last read (kept in memory only).
+func (s *Server) cachedItem(id string) (dedupe.Item, bool) {
+	s.mu.Lock()
+	snap := s.snap
+	s.mu.Unlock()
+	if snap == nil {
+		return nil, false
+	}
+	for _, it := range snap.Items {
+		if it.ID() == id {
+			return it, true
+		}
+	}
+	return nil, false
 }
 
 func (s *Server) currentPlan() *dedupe.Plan {
@@ -521,10 +543,13 @@ func (s *Server) handleDetails(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "unknown item")
 		return
 	}
-	it, err := c.Get(id)
-	if err != nil {
-		writeError(w, http.StatusBadGateway, err.Error())
-		return
+	it, ok := s.cachedItem(id)
+	if !ok {
+		var err error
+		if it, err = c.Get(id); err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
 	}
 	str := func(v any) string { s, _ := v.(string); return s }
 	d := itemDetails{
