@@ -52,6 +52,7 @@ Der **Selbsttest** legt zwei Wegwerf-Einträge auf deinem Server an, führt sie 
 - Die Oberfläche lauscht nur auf `127.0.0.1`. Zugriff braucht ein Zufalls-Token aus dem Startlink (wird zum Cookie), einen eigenen Header und den exakten Hostnamen. Das sperrt andere Webseiten und DNS-Rebinding aus.
 - BitMerger schreibt nie Passwörter auf die Platte. Die Plan-Datei im Cache-Ordner enthält Namen, Hosts und Passwort-*Kennungen* (P1, P2), keine Geheimnisse.
 - Die Bitwarden-CLI läuft mit eigenem Wegwerf-Datenordner. Beenden meldet ab und löscht ihn, ebenso 20 Minuten ohne Aktivität im Browser.
+- Für das nächste Mal bleiben Server, E-Mail (oder API-Client-ID) und die Geräte-ID der CLI. So ist das Formular ausgefüllt, und der Server meldet nicht bei jedem Start ein neues Gerät. Nie gespeichert werden Master-Passwort, API-Secret und Zwei-Faktor-Codes.
 - Für Tempo nutzt BitMerger `bw serve`, gebunden an `127.0.0.1` mit Bitwardens Origin-Schutz. Solange es läuft, könnten andere Programme auf deinem Rechner damit sprechen, genau wie mit einer entsperrten `bw`-Sitzung. BitMerger nicht auf geteilten oder fremden Rechnern nutzen.
 - Bitwardens Historie hält höchstens fünf alte Passwörter. Gruppen, deren aktuelle Passwörter nicht hineinpassen, werden übersprungen.
 

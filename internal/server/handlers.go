@@ -17,6 +17,7 @@ type stateResponse struct {
 	Download  *downloadState `json:"download,omitempty"`
 	Account   *account       `json:"account,omitempty"`
 	HasPlan   bool           `json:"hasPlan"`
+	LastLogin *lastLogin     `json:"lastLogin,omitempty"`
 	Job       *Job           `json:"job,omitempty"`
 }
 
@@ -27,7 +28,8 @@ func (s *Server) handleState(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Lock()
 	resp := stateResponse{Version: s.Version, BWVersion: bw.Version, BWReady: ready,
-		Download: s.download, Account: s.account, HasPlan: s.plan != nil && s.account != nil && s.plan.Account == s.account.Email}
+		Download: s.download, Account: s.account, HasPlan: s.plan != nil && s.account != nil && s.plan.Account == s.account.Email,
+		LastLogin: s.lastLogin}
 	if s.job != nil {
 		j := s.job.snapshot()
 		j.Result = nil // fetched separately; can be large
@@ -114,8 +116,14 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if email == "" {
 		email = req.Email
 	}
+	last := &lastLogin{Server: req.Server, Email: req.Email, ClientID: req.ClientID}
+	if req.ClientID != "" {
+		last.Email = ""
+	}
+	_ = saveJSON(s.loginFile, last)
 	s.mu.Lock()
 	s.account = &account{Email: email, Server: st.ServerURL, Fast: fast}
+	s.lastLogin = last
 	s.mu.Unlock()
 	writeJSON(w, map[string]bool{"ok": true})
 }

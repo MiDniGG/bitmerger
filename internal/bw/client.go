@@ -40,7 +40,49 @@ func NewClient(bin string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	seedDevice(base, dir)
 	return &Client{bin: bin, dataDir: dir}, nil
+}
+
+// The CLI identifies itself to the server with an application id that it
+// creates in its data folder. A fresh folder per session would look like a
+// new device on every start, and servers mail a "new device" notice each
+// time. So the id (and nothing else) is kept in device.json and put into
+// every new data folder.
+
+const deviceKey = "global_applicationId_appId"
+
+func seedDevice(base, dir string) {
+	b, err := os.ReadFile(filepath.Join(base, "device.json"))
+	if err != nil {
+		return
+	}
+	var dev struct {
+		AppID string `json:"appId"`
+	}
+	if json.Unmarshal(b, &dev) != nil || dev.AppID == "" {
+		return
+	}
+	data, _ := json.Marshal(map[string]string{deviceKey: dev.AppID})
+	_ = os.WriteFile(filepath.Join(dir, "data.json"), data, 0o600)
+}
+
+// rememberDevice stores the application id the CLI uses for this session.
+func (c *Client) rememberDevice() {
+	b, err := os.ReadFile(filepath.Join(c.dataDir, "data.json"))
+	if err != nil {
+		return
+	}
+	var data map[string]any
+	if json.Unmarshal(b, &data) != nil {
+		return
+	}
+	id, _ := data[deviceKey].(string)
+	if id == "" {
+		return
+	}
+	out, _ := json.Marshal(map[string]string{"appId": id})
+	_ = os.WriteFile(filepath.Join(filepath.Dir(c.dataDir), "device.json"), out, 0o600)
 }
 
 // CLIError carries the CLI's own message.
@@ -137,6 +179,7 @@ func (c *Client) Login(r LoginRequest) error {
 			return err
 		}
 		c.setSession(key)
+		c.rememberDevice()
 		return nil
 	}
 	args := []string{"login", r.Email, "--passwordenv", "BITMERGER_PW", "--raw"}
@@ -155,6 +198,7 @@ func (c *Client) Login(r LoginRequest) error {
 		return err
 	}
 	c.setSession(key)
+	c.rememberDevice()
 	return nil
 }
 

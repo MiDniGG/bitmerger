@@ -30,7 +30,7 @@ const app = {
   lastJobRunning: false,
   localBusy: null,     // text while a direct request runs (login)
   error: null,
-  login: { tab: "password", server: "us", url: "", email: "", method: "", twoStep: null },
+  login: { tab: "password", server: "us", url: "", email: "", clientId: "", method: "", twoStep: null, prefilled: false },
   match: "host",
   filter: "all",
   reveal: {},          // id -> {state: "loading"|"shown", value, timer}
@@ -62,6 +62,8 @@ async function poll() {
     const before = app.server;
     app.server = s;
     await onJobTransition(before, s);
+    // The login request can still be running when polling already sees the account.
+    if (s.hasPlan && !app.plan) await loadPlan();
   } catch (e) {
     app.error = t("error_generic", { e: e.message });
   }
@@ -264,7 +266,7 @@ function render() {
   $("#busyText").textContent = text || "";
 
   // keep focus and scroll when only the review is re-rendered by polling
-  if (view === "review" && $("#main").dataset.view === "review" && app.plan) {
+  if (view === "review" && $("#main").dataset.view === "review" && app.plan && $("#toolbar")) {
     renderReviewToolbar();
     return;
   }
@@ -327,7 +329,21 @@ function viewSetup() {
     <div class="row" style="margin-top:14px"><button class="btn" id="setup" ${running ? "disabled" : ""}>${running ? '<span class="spinner"></span>' : ""}${esc(running ? t("setup_running") : t("setup_button"))}</button></div></div>`;
 }
 
+// Fill the form with the last successful login (server, email or client id; never secrets).
+function takeLastLogin() {
+  const l = app.login, last = app.server && app.server.lastLogin;
+  if (l.prefilled || !last) return;
+  l.prefilled = true;
+  const known = Object.entries(SERVERS).find(([, url]) => url === last.server);
+  l.server = known ? known[0] : "self";
+  l.url = known ? "" : last.server.replace(/^https:\/\//i, "");
+  l.tab = last.clientId ? "apikey" : "password";
+  l.email = last.email || "";
+  l.clientId = last.clientId || "";
+}
+
 function viewLogin() {
+  takeLastLogin();
   const l = app.login;
   const running = !!app.localBusy;
   const tab = (k) => `<button type="button" data-tab="${k}" class="${l.tab === k ? "on" : ""}">${esc(t("tab_" + k))}</button>`;
@@ -562,6 +578,12 @@ function bind(view) {
     f.server.onchange = () => { app.login.server = f.server.value; render(); };
     f.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { app.login.tab = b.dataset.tab; app.login.twoStep = null; render(); });
     if (f.twoStepMethod) f.twoStepMethod.onchange = () => { app.login.method = f.twoStepMethod.value; };
+    // remembered values go in once; after that the typed values are kept by restoreInputs
+    const fill = { url: app.login.url, email: app.login.email, clientId: app.login.clientId };
+    for (const [name, value] of Object.entries(fill)) {
+      if (f[name] && !f[name].value && value && !app.login.filled?.[name]) { f[name].value = value; (app.login.filled ||= {})[name] = true; }
+    }
+    if (app.login.prefilled && !document.activeElement?.closest?.("#loginForm") && f.password) f.password.focus();
 
     f.onsubmit = (e) => { e.preventDefault(); doLogin(f); };
 

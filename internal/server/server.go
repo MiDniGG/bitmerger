@@ -49,6 +49,8 @@ type Server struct {
 	client     Backend
 	newBackend func() (Backend, error)
 	planFile   string
+	loginFile  string
+	lastLogin  *lastLogin
 	account    *account
 	plan       *dedupe.Plan
 	job        *Job
@@ -97,11 +99,12 @@ func New(version string, newBackend func() (Backend, error)) (*Server, net.Liste
 	}
 	s := &Server{Version: version, token: hex.EncodeToString(b), addr: l.Addr().String(),
 		quit: make(chan struct{}), lastSeen: time.Now(), newBackend: newBackend}
-	s.planFile = "plan.json"
+	s.planFile, s.loginFile = "plan.json", "login.json"
 	if newBackend != nil {
-		s.planFile = "plan-demo.json"
+		s.planFile, s.loginFile = "plan-demo.json", "login-demo.json"
 	}
 	s.plan = loadPlan(s.planFile)
+	s.lastLogin = loadLastLogin(s.loginFile)
 	return s, l, nil
 }
 
@@ -277,6 +280,34 @@ func loadPlan(name string) *dedupe.Plan {
 }
 
 func savePlan(name string, plan *dedupe.Plan) error {
+	return saveJSON(name, plan)
+}
+
+// lastLogin is what the login form is filled with next time. Never secrets:
+// no password, no API key secret, no two-step code.
+type lastLogin struct {
+	Server   string `json:"server"`
+	Email    string `json:"email,omitempty"`
+	ClientID string `json:"clientId,omitempty"`
+}
+
+func loadLastLogin(name string) *lastLogin {
+	p := planPath(name)
+	if p == "" {
+		return nil
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return nil
+	}
+	var l lastLogin
+	if json.Unmarshal(b, &l) != nil {
+		return nil
+	}
+	return &l
+}
+
+func saveJSON(name string, v any) error {
 	p := planPath(name)
 	if p == "" {
 		return errors.New("no cache directory")
@@ -284,7 +315,7 @@ func savePlan(name string, plan *dedupe.Plan) error {
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return err
 	}
-	b, err := json.Marshal(plan)
+	b, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
