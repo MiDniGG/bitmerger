@@ -34,7 +34,7 @@ const app = {
   match: "host",
   skip: null,          // folder IDs to leave out once the user changed them; null = server's choice
   filter: "all",
-  reveal: {},          // id -> {state: "loading"|"shown", value, timer}
+  reveal: {},          // id -> {state: "loading"|"shown", value}; shown until hidden again
   details: {},         // id -> {open, state: "loading"|"ok"|"error", data, error}
   save: { timer: null, state: "saved", error: null },
   ended: false,
@@ -176,14 +176,14 @@ function scheduleSave() {
 async function reveal(id, card) {
   const r = app.reveal[id];
   if (r && r.state === "loading") return;
-  if (r && r.state === "shown") { clearTimeout(r.timer); delete app.reveal[id]; rerenderCard(card); return; }
+  if (r && r.state === "shown") { delete app.reveal[id]; rerenderCard(card); return; }
   app.reveal[id] = { state: "loading" };
   rerenderCard(card);
   try {
     const res = await api("GET", "/api/password?id=" + encodeURIComponent(id));
-    app.reveal[id] = { state: "shown", value: res.password, timer: setTimeout(() => { delete app.reveal[id]; rerenderCard(card); }, 30000) };
+    app.reveal[id] = { state: "shown", value: res.password };
   } catch (e) {
-    app.reveal[id] = { state: "shown", value: "⚠ " + e.message, timer: setTimeout(() => { delete app.reveal[id]; rerenderCard(card); }, 8000) };
+    app.reveal[id] = { state: "shown", value: "⚠ " + e.message };
   }
   rerenderCard(card);
 }
@@ -565,7 +565,7 @@ function fillCard(el, g) {
       <td><input type="radio" name="k${g.no}" data-keeper="${esc(e.id)}" ${g.keeper === e.id ? "checked" : ""} ${e.include ? "" : "disabled"}></td>
       <td class="ename">${esc(e.name)}</td>
       <td>${esc(e.username || "-")}</td>
-      <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${e.pw === "-" ? "-" : r && r.state === "shown" ? `<code class="plain inline" title="${esc(r.value)}">${esc(r.value)}</code>` : pwBadge(e)}</label>${revealBtn}</div></td>
+      <td><div class="pw"><label><input type="radio" name="p${g.no}" data-pwfrom="${esc(e.id)}" ${g.passwordFrom === e.id ? "checked" : ""} ${e.include && e.pw !== "-" ? "" : "disabled"}> ${e.pw === "-" ? "-" : pwBadge(e)}</label>${revealBtn}</div></td>
       <td>${locationHTML(e)}</td>
       <td class="hosts">${esc(e.hosts.join(", ") || "-")}</td>${show.extras ? `<td class="extras">${esc((e.features || []).map(featureText).join(", ") || "-")}</td>` : ""}<td class="nowrap">${esc(fmtDate(e.revision))}</td></tr>
       ${d && d.open ? `<tr class="detail"><td></td><td colspan="${cols - 1}">${detailsHTML(d)}</td></tr>` : ""}`;
@@ -573,7 +573,7 @@ function fillCard(el, g) {
   el.innerHTML = `<div class="ghead"><label><input type="checkbox" data-active ${g.active ? "checked" : ""} ${blocked.length || busy() ? "disabled" : ""}> <b>${g.no}. ${esc(g.title)}</b></label>
       <span class="muted">${esc(t("scope_" + scope))}</span>${tags.join("")}</div>
     <div class="name"><span class="muted">${esc(t("name_after"))}</span><input type="text" data-name value="${esc(g.newName || "")}" placeholder="${esc(keeper.name || "")}"></div>
-    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}">${esc(t("col_with"))}</th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th title="${esc(t("tip_location"))}">${esc(t("col_location"))}</th><th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
+    <div class="scroll"><table><tr><th title="${esc(t("tip_with"))}"></th><th title="${esc(t("tip_keep"))}">${esc(t("col_keep"))}</th><th>${esc(t("col_name"))}</th><th>${esc(t("col_user"))}</th><th title="${esc(t("tip_password"))}">${esc(t("col_password"))}</th><th title="${esc(t("tip_location"))}">${esc(t("col_location"))}</th><th>${esc(t("col_hosts"))}</th>${show.extras ? `<th>${esc(t("col_extras"))}</th>` : ""}<th>${esc(t("col_changed"))}</th></tr>${rows}</table></div>`;
 
   const changed = (rerender = true) => { if (rerender) fillCard(el, g); renderReviewToolbar(); scheduleSave(); };
   el.querySelector("[data-active]").onchange = (ev) => { g.active = ev.target.checked; changed(); };
@@ -595,6 +595,25 @@ function fillCard(el, g) {
     toggleDetails(tr.dataset.row, el);
   });
   el.querySelector("[data-name]").oninput = (ev) => { g.newName = ev.target.value.trim(); changed(false); };
+  // positions are known only once the card is in the page
+  requestAnimationFrame(() => placePasswords(el));
+}
+
+// A shown password floats below its eye button, on the card itself: inside
+// the scrolling table it would be cut off, inside the row it would grow it.
+function placePasswords(el) {
+  el.querySelectorAll(".pwpop").forEach((p) => p.remove());
+  for (const b of el.querySelectorAll("[data-reveal]")) {
+    const r = app.reveal[b.dataset.reveal];
+    if (!r || r.state !== "shown") continue;
+    const pop = document.createElement("code");
+    pop.className = "plain pwpop";
+    pop.textContent = r.value;
+    const br = b.getBoundingClientRect(), cr = el.getBoundingClientRect();
+    pop.style.left = Math.max(0, br.left - cr.left - 120) + "px";
+    pop.style.top = br.bottom - cr.top + 4 + "px";
+    el.appendChild(pop);
+  }
 }
 
 // ---------------------------------------------------------------- dry run and merge

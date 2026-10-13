@@ -84,7 +84,7 @@ th{text-align:left;color:var(--muted);font-weight:500;border-bottom:1px solid va
 td{padding:6px 5px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
 tr.excluded td:not(:first-child){color:var(--off)}
-.pw{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.pw{display:flex;gap:6px;align-items:center;white-space:nowrap;position:relative}
 .plain{display:block;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all;user-select:all;margin-top:3px}
 .list{margin:6px 0;padding-left:18px}
 .list li{margin:3px 0}
@@ -146,4 +146,6 @@ tr.entry.open td{background:var(--accent-soft)}
 tr.excluded .pwtag{opacity:.5}
 td.hosts{overflow-wrap:anywhere;min-width:150px}
 td.extras{min-width:100px}
-code.plain.inline{display:inline-block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;margin:0;padding:1px 6px;font-size:12.5px}
+/* shown password floats over the rows below instead of growing its row */
+section.group{position:relative}
+code.pwpop{position:absolute;z-index:5;margin:0;padding:6px 10px;max-width:420px;white-space:pre-wrap;word-break:break-all;background:var(--card);color:var(--text);border:1px solid var(--accent);border-radius:7px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:text}
