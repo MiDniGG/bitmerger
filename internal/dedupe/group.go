@@ -186,19 +186,36 @@ func FindGroups(items []Item, match Match) []Group {
 	}
 	for _, it := range items {
 		user := strings.ToLower(strings.TrimSpace(it.Username()))
-		sites := map[string]bool{}
+		hosts, domains := map[string]bool{}, map[string]bool{}
 		for _, u := range it.URIs() {
-			if s := SiteKey(u, match); s != "" {
-				sites[s] = true
+			if s := SiteKey(u, MatchHost); s != "" {
+				hosts[s] = true
+			}
+			if s := SiteKey(u, MatchDomain); s != "" {
+				domains[s] = true
 			}
 		}
-		if it.Type() == TypeLogin && len(sites) > 0 {
-			for s := range sites {
+		pw := pwHash(it.Password())
+		if it.Type() == TypeLogin && len(hosts) > 0 {
+			// Same host and username is a duplicate. Across subdomains
+			// (match by domain) the password must match too: the same
+			// username on audio.example.com and tools.example.com with
+			// different passwords are different accounts.
+			for s := range hosts {
 				switch {
 				case user != "":
 					add(key{ReasonSite, s, user, ""}, it.ID())
-				case it.Password() != "":
-					add(key{ReasonSitePW, s, pwHash(it.Password()), ""}, it.ID())
+				case pw != "":
+					add(key{ReasonSitePW, s, pw, ""}, it.ID())
+				}
+			}
+			if match == MatchDomain && pw != "" {
+				for s := range domains {
+					if user != "" {
+						add(key{ReasonSite, "domain:" + s, user, pw}, it.ID())
+					} else {
+						add(key{ReasonSitePW, "domain:" + s, pw, ""}, it.ID())
+					}
 				}
 			}
 		} else {

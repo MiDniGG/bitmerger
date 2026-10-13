@@ -73,14 +73,17 @@ func TestFindGroupsByHost(t *testing.T) {
 	}
 }
 
-func TestFindGroupsByDomainMarksSubdomains(t *testing.T) {
-	plan := BuildPlan(selfHosted(), Directory{}, MatchDomain)
+func TestFindGroupsByDomainNeedsSamePasswordAcrossSubdomains(t *testing.T) {
+	items := append(selfHosted(), login("g", "Tools mirror", "midnigg", "3", "https://tools2.midnigg.de"))
+	plan := BuildPlan(items, Directory{}, MatchDomain)
 	if len(plan.Groups) != 1 {
 		t.Fatalf("want 1 group, got %d", len(plan.Groups))
 	}
 	g := plan.Groups[0]
-	if len(g.Entries) != 5 {
-		t.Errorf("want 5 entries (other user excluded), got %d", len(g.Entries))
+	// tools (c, d) and tools2 (g) share the password; audio, archive and
+	// paperless have their own and stay apart.
+	if len(g.Entries) != 3 {
+		t.Errorf("want 3 entries, got %d", len(g.Entries))
 	}
 	if g.Active || len(g.Notes) != 1 || g.Notes[0] != NoteSubdomains {
 		t.Errorf("subdomain group must be marked and not preselected: %+v", g)
@@ -262,8 +265,7 @@ func TestSkippedFolderIsIgnored(t *testing.T) {
 	}
 	plan := BuildPlan(items, Directory{}, MatchHost)
 	plan.Refresh(items, dir)
-	g := plan.Groups[0]
-	if g.Active || g.Entries[1].Include {
-		t.Fatalf("trash entry still included: active %v include %v", g.Active, g.Entries[1].Include)
+	if len(plan.Groups) != 0 {
+		t.Fatalf("group with one entry left must be dropped, got %d groups", len(plan.Groups))
 	}
 }

@@ -97,6 +97,7 @@ async function onJobTransition(before, s) {
 
 async function loadPlan() {
   try { app.plan = await api("GET", "/api/plan"); } catch (e) { app.plan = null; }
+  if (app.plan && app.plan.match) app.match = app.plan.match;
 }
 
 // ---------------------------------------------------------------- actions
@@ -423,7 +424,10 @@ function groupState(g) {
 
 function viewReview() {
   if (!app.plan) return `<div class="panel"><p>…</p></div>`;
-  return `<div class="panel"><h2>${esc(t("review_title"))}</h2><p>${esc(t("review_help"))}</p><p class="muted">${esc(t("pw_legend"))}</p></div>
+  const left = ((app.server && app.server.folders) || []).filter((f) => f.skip).map((f) => f.name);
+  const folderLine = left.length ? t("folders_searched", { list: left.join(", ") }) : t("folders_none");
+  return `<div class="panel"><h2>${esc(t("review_title"))}</h2><p>${esc(t("review_help"))}</p><p class="muted">${esc(t("pw_legend"))}</p>
+    <p class="folder-line">${esc(folderLine)} <button class="link" id="changeFolders" type="button">${esc(t("folders_change"))}</button></p></div>
     <div class="toolbar" id="toolbar"></div>
     <div id="groups">${app.plan.groups.length ? "" : `<div class="panel"><p>${esc(t("no_groups"))}</p></div>`}</div>`;
 }
@@ -627,7 +631,11 @@ function bind(view) {
   });
   on("#cancel", "onclick", (ev) => { ev.target.disabled = true; ev.target.textContent = t("cancel_requested"); api("POST", "/api/cancel").catch(() => {}); });
   on("#rescanAfter", "onclick", () => { app.view = "scan"; render(); });
-  if (view === "review") { renderReviewToolbar(); renderGroups(); }
+  if (view === "review") {
+    renderReviewToolbar();
+    renderGroups();
+    on("#changeFolders", "onclick", () => flushSave().then(() => { app.view = "scan"; render(); const f = $(".folders"); if (f) f.scrollIntoView({ block: "center" }); }));
+  }
 }
 
 $("#lang").onclick = () => { setLang(LANG === "de" ? "en" : "de"); $("#main").dataset.view = ""; render(); };

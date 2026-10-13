@@ -274,7 +274,9 @@ func Folders(items []Item, dir Directory) []FolderInfo {
 // Refresh updates what the review shows (name, folder, username, ...) from
 // the current vault. Decisions, password labels and the revision the plan
 // was made from stay, so a changed item is still detected before merging.
-// It also fills fields that plans of older versions did not have.
+// It also fills fields that plans of older versions did not have. Entries
+// in left-out folders are dropped, like a new scan would, and so are groups
+// with fewer than two entries left.
 func (p *Plan) Refresh(items []Item, dir Directory) {
 	byID := map[string]Item{}
 	for _, it := range items {
@@ -282,23 +284,38 @@ func (p *Plan) Refresh(items []Item, dir Directory) {
 			byID[it.ID()] = it
 		}
 	}
+	groups := p.Groups[:0]
 	for _, g := range p.Groups {
-		included := 0
+		entries := g.Entries[:0]
 		for _, e := range g.Entries {
 			if it, ok := byID[e.ID]; ok {
-				e.describe(it, dir)
 				if dir.Skip[it.FolderID()] {
-					e.Include = false
+					continue
 				}
+				e.describe(it, dir)
 			}
+			entries = append(entries, e)
+		}
+		g.Entries = entries
+		if len(g.Entries) < 2 {
+			continue
+		}
+		included, keeper := 0, false
+		for _, e := range g.Entries {
 			if e.Include {
 				included++
 			}
+			keeper = keeper || e.ID == g.Keeper
+		}
+		if !keeper {
+			g.Keeper = g.Entries[0].ID
 		}
 		if included < 2 {
 			g.Active = false
 		}
+		groups = append(groups, g)
 	}
+	p.Groups = groups
 }
 
 // trashFolders are the names password managers give their recycle bin.
