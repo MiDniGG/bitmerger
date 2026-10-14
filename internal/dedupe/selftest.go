@@ -40,7 +40,20 @@ func (c CaseResult) OK() bool {
 // Selftest merges throwaway personal items on the real server and checks the
 // result. It covers both password cases; the items are deleted permanently.
 // pause waits between creations so revision dates differ.
-func Selftest(v Vault, pause time.Duration) []CaseResult {
+func Selftest(v Vault, pause time.Duration, progress func(done, total int)) []CaseResult {
+	total := 0
+	if progress != nil {
+		// a dry run against the in-memory vault tells how many server calls follow
+		dry := &countingVault{Vault: NewFakeVault(nil)}
+		runSelftest(dry, 0)
+		total = dry.n
+		progress(0, total)
+		v = &countingVault{Vault: v, step: func(n int) { progress(min(n, total), total) }}
+	}
+	return runSelftest(v, pause)
+}
+
+func runSelftest(v Vault, pause time.Duration) []CaseResult {
 	b := make([]byte, 3)
 	_, _ = rand.Read(b)
 	tag := hex.EncodeToString(b)
@@ -48,6 +61,50 @@ func Selftest(v Vault, pause time.Duration) []CaseResult {
 		selftestCase(v, "newest_password", "old-"+tag, []string{"new-" + tag}, true, pause),
 		selftestCase(v, "keeper_password", "keep-"+tag, []string{"x-" + tag, "y-" + tag}, false, pause),
 	}
+}
+
+// countingVault counts server calls to report progress.
+type countingVault struct {
+	Vault
+	n    int
+	step func(n int)
+}
+
+func (c *countingVault) count() {
+	c.n++
+	if c.step != nil {
+		c.step(c.n)
+	}
+}
+
+func (c *countingVault) Get(id string) (Item, error) {
+	defer c.count()
+	return c.Vault.Get(id)
+}
+
+func (c *countingVault) Edit(it Item) (Item, error) {
+	defer c.count()
+	return c.Vault.Edit(it)
+}
+
+func (c *countingVault) Create(it Item) (Item, error) {
+	defer c.count()
+	return c.Vault.Create(it)
+}
+
+func (c *countingVault) SetCollections(id, orgID string, collectionIDs []string) error {
+	defer c.count()
+	return c.Vault.SetCollections(id, orgID, collectionIDs)
+}
+
+func (c *countingVault) CopyAttachment(sourceID string, attachment map[string]any, targetID string) error {
+	defer c.count()
+	return c.Vault.CopyAttachment(sourceID, attachment, targetID)
+}
+
+func (c *countingVault) Delete(id string, permanent bool) error {
+	defer c.count()
+	return c.Vault.Delete(id, permanent)
 }
 
 func selftestItem(suffix, pw, notes string) Item {

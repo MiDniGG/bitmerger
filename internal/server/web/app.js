@@ -337,9 +337,27 @@ function busyText() {
   if (jobRunning()) {
     const j = s.job;
     if (j.kind === "apply" && j.phase === "merge") return t("merge_running", { d: j.done + 1 > j.total ? j.total : j.done + 1, n: j.total, cur: j.current || "" });
+    if (j.kind === "selftest" && j.total) return t("selftest_running", { d: j.done, n: j.total });
     return t("phase_" + (j.phase || "sync"));
   }
   return null;
+}
+
+// Remaining time from the pace so far; null until there is a pace.
+function remaining(j) {
+  const spent = (Date.now() - new Date(j.started).getTime()) / 1000;
+  if (!j.done || !j.total || !(spent > 0)) return null;
+  const sec = (spent / j.done) * (j.total - j.done);
+  if (sec < 60) return t("dur_seconds", { n: Math.max(10, Math.round(sec / 10) * 10) });
+  return t("dur_minutes", { n: Math.round(sec / 60) });
+}
+
+function selftestProgress() {
+  const j = app.server.job;
+  if (!j || !j.total) return "";
+  const left = remaining(j);
+  return `<div class="progress"><div style="width:${Math.round((100 * j.done) / j.total)}%"></div></div>
+    <div class="muted">${esc(t("selftest_running", { d: j.done, n: j.total }))}${left ? " · " + esc(t("time_left", { t: left })) : ""}</div>`;
 }
 
 function viewSetup() {
@@ -418,7 +436,7 @@ function viewScan() {
            <button class="btn secondary" id="scan" ${running ? "disabled" : ""}>${esc(t("reread"))}</button>`
         : `<button class="btn" id="scan" ${running ? "disabled" : ""}>${scanning ? '<span class="spinner"></span>' : ""}${esc(scanning ? t("scan_running") : t("scan_button"))}</button>`}</div>
       ${app.plan ? `<p class="muted" style="margin:10px 0 0">${esc(t("scan_again_hint"))}</p>` : ""}</div>
-    <div class="panel"><h2>${esc(t("selftest_title"))}</h2><p>${esc(t("selftest_text"))}</p>${selftestResult()}
+    <div class="panel"><h2>${esc(t("selftest_title"))}</h2><p>${esc(t("selftest_text"))}</p>${testing ? selftestProgress() : selftestResult()}
       <div class="row" style="margin-top:12px"><button class="btn secondary" id="selftest" ${running ? "disabled" : ""}>${testing ? '<span class="spinner"></span>' : ""}${esc(testing ? t("phase_selftest") : t("selftest_button"))}</button></div></div>`;
 }
 

@@ -221,7 +221,7 @@ func TestMultiOrgIsSkipped(t *testing.T) {
 }
 
 func TestSelftestOnFake(t *testing.T) {
-	for _, c := range Selftest(NewFakeVault(nil), 0) {
+	for _, c := range Selftest(NewFakeVault(nil), 0, nil) {
 		if !c.OK() {
 			t.Errorf("case %s failed: %+v", c.Case, c)
 		}
@@ -316,5 +316,18 @@ func TestRemoveGroup(t *testing.T) {
 	plan.Remove(2)
 	if len(plan.Groups) != 2 || plan.Groups[1].No != 3 {
 		t.Fatalf("groups %+v", plan.Groups)
+	}
+}
+
+func TestSelftestProgress(t *testing.T) {
+	last, total := -1, 0
+	Selftest(NewFakeVault(nil), 0, func(done, n int) {
+		if done < last {
+			t.Fatalf("progress went back from %d to %d", last, done)
+		}
+		last, total = done, n
+	})
+	if total == 0 || last != total {
+		t.Fatalf("progress ended at %d of %d", last, total)
 	}
 }

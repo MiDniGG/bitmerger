@@ -105,6 +105,9 @@ const TEXTS = {
     col_location: "Location",
     tip_location: "Personal vault or organization, then folder and collections",
     merge_busy: "Please do not edit the vault in other Bitwarden apps meanwhile.",
+    selftest_running: "Selftest: step {d} of {n}",
+    time_left: "{t} left",
+    dur_seconds: "about {n} seconds",
   },
   de: {
     quit: "Beenden", logout: "Abmelden", lang_switch: "EN",
@@ -211,6 +214,9 @@ const TEXTS = {
     col_location: "Ablage",
     tip_location: "Persönlicher Tresor oder Organisation, dazu Ordner und Sammlungen",
     merge_busy: "Bitte in der Zeit den Tresor nicht in anderen Bitwarden-Apps bearbeiten.",
+    selftest_running: "Selbsttest: Schritt {d} von {n}",
+    time_left: "noch {t}",
+    dur_seconds: "etwa {n} Sekunden",
   },
 };
 

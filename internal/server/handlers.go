@@ -436,7 +436,9 @@ func (s *Server) handleSelftest(w http.ResponseWriter, r *http.Request) {
 		j.set(func(j *Job) { j.Phase = "selftest" })
 		c.StopServe()
 		defer func() { _ = c.StartServe() }()
-		res := dedupe.Selftest(c, 1200*time.Millisecond)
+		res := dedupe.Selftest(c, 1200*time.Millisecond, func(done, total int) {
+			j.set(func(j *Job) { j.Done, j.Total = done, total })
+		})
 		j.set(func(j *Job) { j.Result = res })
 		return c.Sync()
 	})
