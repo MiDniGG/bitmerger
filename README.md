@@ -64,7 +64,7 @@ Groups spanning more than one organization are skipped until you untick entries 
 ## Security
 
 - The web interface listens on `127.0.0.1` only. Access needs a random token from the start link (turned into a cookie), a custom header and the exact host name, which blocks other websites and DNS rebinding.
-- Passwords are never written to disk by BitMerger. The plan file in the cache folder contains names, hosts and password *labels* (P1, P2), no secrets.
+- Passwords are never written to disk by BitMerger. Vault contents and scan results stay in memory only and are gone after quitting. The cache folder keeps only server, email (or API client ID), device ID and the folder selection.
 - The Bitwarden CLI runs with its own throwaway data folder. Quitting logs out and deletes it; so does 20 minutes without any browser activity.
 - Kept for next time: server, email (or API client ID) and the CLI's device ID, so the login form is filled in and the server does not report a new device on every start. Never the master password, the API secret or two-step codes.
 - For speed BitMerger uses `bw serve`, bound to `127.0.0.1` with Bitwarden's origin protection. While it runs, other programs on your computer could talk to it, just as they could use an unlocked `bw` session. Do not run BitMerger on a shared or untrusted machine.

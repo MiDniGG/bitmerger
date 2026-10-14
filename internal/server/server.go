@@ -110,7 +110,10 @@ func New(version string, newBackend func() (Backend, error)) (*Server, net.Liste
 		s.planFile, s.loginFile, s.prefsFile = "plan-demo.json", "login-demo.json", "prefs-demo.json"
 	}
 	s.prefs = loadPrefs(s.prefsFile)
-	s.plan = loadPlan(s.planFile)
+	// The plan lives in memory only. Older versions kept it on disk; remove that.
+	if p := planPath(s.planFile); p != "" {
+		_ = os.Remove(p)
+	}
 	s.lastLogin = loadLastLogin(s.loginFile)
 	return s, l, nil
 }
@@ -268,26 +271,6 @@ func planPath(name string) string {
 		return ""
 	}
 	return filepath.Join(base, name)
-}
-
-func loadPlan(name string) *dedupe.Plan {
-	p := planPath(name)
-	if p == "" {
-		return nil
-	}
-	b, err := os.ReadFile(p)
-	if err != nil {
-		return nil
-	}
-	var plan dedupe.Plan
-	if json.Unmarshal(b, &plan) != nil {
-		return nil
-	}
-	return &plan
-}
-
-func savePlan(name string, plan *dedupe.Plan) error {
-	return saveJSON(name, plan)
 }
 
 // lastLogin is what the login form is filled with next time. Never secrets:

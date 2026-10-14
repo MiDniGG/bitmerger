@@ -145,7 +145,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		if s.plan != nil && s.plan.Account == email {
 			dir.Skip = s.prefs.skipSet(s.folders)
 			s.plan.Refresh(snap.Items, dir)
-			_ = savePlan(s.planFile, s.plan)
 		}
 	}
 	s.account = &account{Email: email, Server: st.ServerURL, Fast: fast}
@@ -260,7 +259,7 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 		}
 		s.plan = plan
 		s.mu.Unlock()
-		return savePlan(s.planFile, plan)
+		return nil
 	})
 }
 
@@ -294,12 +293,7 @@ func (s *Server) handlePlan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.plan.ApplyDecisions(&posted)
-		err := savePlan(s.planFile, s.plan)
 		s.mu.Unlock()
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
 		writeJSON(w, map[string]bool{"ok": true})
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "GET or PUT")
@@ -419,6 +413,12 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 			entry := LogEntry{No: st.No, Title: st.Title, OK: err == nil}
 			if err != nil {
 				entry.Error = err.Error()
+			}
+			if err == nil {
+				// a merged group must not show up again in the review
+				s.mu.Lock()
+				plan.Remove(st.No)
+				s.mu.Unlock()
 			}
 			j.set(func(j *Job) { j.Done++; j.Log = append(j.Log, entry) })
 		}

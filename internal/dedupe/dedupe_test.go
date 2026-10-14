@@ -292,3 +292,29 @@ func TestCarryOverKeepsChoicesOfUnchangedGroups(t *testing.T) {
 		}
 	}
 }
+
+func TestRefreshDropsMergedGroup(t *testing.T) {
+	items := []Item{
+		login("a", "Shop", "me", "x", "https://shop.example"),
+		login("b", "Shop", "me", "x", "https://shop.example"),
+		login("c", "Mail", "me", "y", "https://mail.example"),
+		login("d", "Mail", "me", "y", "https://mail.example"),
+	}
+	plan := BuildPlan(items, Directory{}, MatchHost)
+	if len(plan.Groups) != 2 {
+		t.Fatalf("got %d groups, want 2", len(plan.Groups))
+	}
+	items[1]["deletedDate"] = "2026-10-14T08:00:00Z" // duplicate went to the trash
+	plan.Refresh(items[:3], Directory{})             // and d is gone for good
+	if len(plan.Groups) != 0 {
+		t.Fatalf("merged groups must leave the plan, got %d", len(plan.Groups))
+	}
+}
+
+func TestRemoveGroup(t *testing.T) {
+	plan := &Plan{Groups: []*PlanGroup{{No: 1}, {No: 2}, {No: 3}}}
+	plan.Remove(2)
+	if len(plan.Groups) != 2 || plan.Groups[1].No != 3 {
+		t.Fatalf("groups %+v", plan.Groups)
+	}
+}

@@ -299,12 +299,12 @@ func (p *Plan) Refresh(items []Item, dir Directory) {
 	for _, g := range p.Groups {
 		entries := g.Entries[:0]
 		for _, e := range g.Entries {
-			if it, ok := byID[e.ID]; ok {
-				if dir.Skip[it.FolderID()] {
-					continue
-				}
-				e.describe(it, dir)
+			// entries gone from the vault (merged, trashed, deleted) leave the plan
+			it, ok := byID[e.ID]
+			if !ok || dir.Skip[it.FolderID()] {
+				continue
 			}
+			e.describe(it, dir)
 			entries = append(entries, e)
 		}
 		g.Entries = entries
@@ -325,6 +325,17 @@ func (p *Plan) Refresh(items []Item, dir Directory) {
 			g.Active = false
 		}
 		groups = append(groups, g)
+	}
+	p.Groups = groups
+}
+
+// Remove drops the group with number no, e.g. after it was merged.
+func (p *Plan) Remove(no int) {
+	groups := p.Groups[:0]
+	for _, g := range p.Groups {
+		if g.No != no {
+			groups = append(groups, g)
+		}
 	}
 	p.Groups = groups
 }

@@ -128,13 +128,16 @@ async function doLogin(form) {
   req.server = l.server === "self" ? serverURL(form.url.value) : SERVERS[l.server];
   if (l.tab === "apikey") {
     req.clientId = form.clientId.value.trim();
-    req.clientSecret = form.clientSecret.value.trim();
+    req.clientSecret = secretValue(form, "clientSecret").trim();
   } else {
     req.email = form.email.value.trim();
     l.email = req.email;
     if (form.twoStepMethod && form.twoStepMethod.value) { req.method = form.twoStepMethod.value; req.code = form.code.value.trim(); }
   }
-  req.password = form.password.value;
+  req.password = secretValue(form, "password");
+  // the editable boxes have no "required"; check them by hand
+  const empty = ["clientSecret", "password"].find((n) => form.querySelector(`[data-secret="${n}"]`) && !secretValue(form, n));
+  if (empty) { form.querySelector(`[data-secret="${empty}"]`).focus(); return; }
   app.localBusy = t("login_running");
   app.error = null;
   render();
@@ -295,9 +298,12 @@ function render() {
 function keepInputs() {
   const values = {};
   $("#main").querySelectorAll("input[name]:not([type=radio]):not([type=checkbox])").forEach((el) => { values[el.name] = el.value; });
+  const secrets = {};
+  $("#main").querySelectorAll("div[data-secret]").forEach((el) => { secrets[el.dataset.secret] = el.textContent; });
   const a = document.activeElement;
-  const focus = a && a.name && $("#main").contains(a) ? { name: a.name, start: a.selectionStart, end: a.selectionEnd } : null;
-  return { values, focus };
+  let focus = a && a.name && $("#main").contains(a) ? { name: a.name, start: a.selectionStart, end: a.selectionEnd } : null;
+  if (a && a.dataset?.secret && $("#main").contains(a)) focus = { secret: a.dataset.secret };
+  return { values, secrets, focus };
 }
 
 function restoreInputs(kept) {
@@ -305,7 +311,14 @@ function restoreInputs(kept) {
     const el = $("#main").querySelector(`input[name="${name}"]`);
     if (el && !el.value) el.value = value;
   }
-  if (kept.focus) {
+  for (const [name, value] of Object.entries(kept.secrets || {})) {
+    const el = $("#main").querySelector(`div[data-secret="${name}"]`);
+    if (el && !el.textContent) el.textContent = value;
+  }
+  if (kept.focus?.secret) {
+    const el = $("#main").querySelector(`[data-secret="${kept.focus.secret}"]`);
+    if (el) { el.focus(); getSelection()?.selectAllChildren(el); getSelection()?.collapseToEnd(); }
+  } else if (kept.focus) {
     const el = $("#main").querySelector(`[name="${kept.focus.name}"]`);
     if (el) {
       el.focus();
@@ -352,14 +365,21 @@ function takeLastLogin() {
   l.clientId = last.clientId || "";
 }
 
-// Secret fields: browsers offer to save anything typed into type=password,
-// and BitMerger must never end up in a password manager's list. Where the
-// browser can mask a text field, use that instead; paste still works.
+// Secret fields: browsers and password manager extensions offer to save
+// whatever is typed into a password input, and BitMerger must never end up
+// in that list. Where the browser can mask text, the field is a plain
+// editable box instead of an input; paste still works.
 const maskText = typeof CSS !== "undefined" && CSS.supports("-webkit-text-security", "disc");
 
 function secretInput(name) {
-  const type = maskText ? "text" : "password";
-  return `<input type="${type}" name="${name}" class="secret" required autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore>`;
+  if (!maskText) return `<input type="password" name="${name}" data-secret="${name}" required autocomplete="off">`;
+  return `<div class="secret" data-secret="${name}" contenteditable="plaintext-only" role="textbox" spellcheck="false" autocorrect="off" autocapitalize="off" tabindex="0"></div>`;
+}
+
+function secretValue(form, name) {
+  const el = form.querySelector(`[data-secret="${name}"]`);
+  if (!el) return "";
+  return el.tagName === "INPUT" ? el.value : el.textContent.replace(/[\r\n]/g, "");
 }
 
 function viewLogin() {
@@ -375,7 +395,7 @@ function viewLogin() {
     ${l.tab === "apikey" ? `<p class="muted">${esc(t("apikey_hint"))}</p>
       <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" required></label>
       <label class="field"><span>${esc(t("client_secret"))}</span>${secretInput("clientSecret")}</label>`
-      : `<label class="field"><span>${esc(t("email"))}</span><input type="email" name="email" required autocomplete="username"></label>`}
+      : `<label class="field"><span>${esc(t("email"))}</span><input type="email" name="email" required autocomplete="off"></label>`}
     <label class="field"><span>${esc(t("master_password"))}</span>${secretInput("password")}</label>
     ${l.twoStep !== null && l.tab === "password" ? `<div class="msg info"><b>${esc(t("twostep_title"))}</b>${l.twoStep ? "<br>" + esc(l.twoStep) : ""}<br>${esc(t("twostep_email_hint"))}</div>
       <div class="row"><label class="field" style="flex:1"><span>${esc(t("twostep_method"))}</span><select name="twoStepMethod">
@@ -720,7 +740,12 @@ function bind(view) {
     for (const [name, value] of Object.entries(fill)) {
       if (f[name] && !f[name].value && value && !app.login.filled?.[name]) { f[name].value = value; (app.login.filled ||= {})[name] = true; }
     }
-    if (app.login.prefilled && !document.activeElement?.closest?.("#loginForm") && f.password) f.password.focus();
+    const pw = f.querySelector('[data-secret="password"]');
+    if (app.login.prefilled && !document.activeElement?.closest?.("#loginForm") && pw) pw.focus();
+    f.querySelectorAll("div[data-secret]").forEach((el) => {
+      el.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); f.requestSubmit(); } };
+      el.oncopy = el.oncut = (e) => e.preventDefault();
+    });
 
     f.onsubmit = (e) => { e.preventDefault(); doLogin(f); };
 

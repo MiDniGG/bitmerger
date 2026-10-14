@@ -21,9 +21,9 @@ main{max-width:1180px;width:100%;box-sizing:border-box;margin:0 auto;padding:20p
 .narrow{max-width:520px;margin:30px auto}
 label.field{display:block;margin:12px 0}
 label.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-input.secret{-webkit-text-security:disc}
-input[type=text],input[type=email],input[type=password],input[type=url],select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--card)}
-input:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.secret{-webkit-text-security:disc;white-space:nowrap;overflow:hidden;min-height:1.4em;line-height:1.4;cursor:text}
+.secret,input[type=text],input[type=email],input[type=password],input[type=url],select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--card)}
+.secret:focus,input:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:9px 18px;font-weight:600;cursor:pointer}
 .btn.secondary{background:var(--accent-soft);color:var(--accent)}
