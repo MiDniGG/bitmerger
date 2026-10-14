@@ -5,3 +5,4 @@
 .claude/time-track/
 .claude/playwright-mcp/
 .idea
+*.syso
