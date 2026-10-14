@@ -352,6 +352,16 @@ function takeLastLogin() {
   l.clientId = last.clientId || "";
 }
 
+// Secret fields: browsers offer to save anything typed into type=password,
+// and BitMerger must never end up in a password manager's list. Where the
+// browser can mask a text field, use that instead; paste still works.
+const maskText = typeof CSS !== "undefined" && CSS.supports("-webkit-text-security", "disc");
+
+function secretInput(name) {
+  const type = maskText ? "text" : "password";
+  return `<input type="${type}" name="${name}" class="secret" required autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore>`;
+}
+
 function viewLogin() {
   takeLastLogin();
   const l = app.login;
@@ -364,9 +374,9 @@ function viewLogin() {
     <div class="tabs">${tab("password")}${tab("apikey")}</div>
     ${l.tab === "apikey" ? `<p class="muted">${esc(t("apikey_hint"))}</p>
       <label class="field"><span>${esc(t("client_id"))}</span><input type="text" name="clientId" required></label>
-      <label class="field"><span>${esc(t("client_secret"))}</span><input type="password" name="clientSecret" required></label>`
+      <label class="field"><span>${esc(t("client_secret"))}</span>${secretInput("clientSecret")}</label>`
       : `<label class="field"><span>${esc(t("email"))}</span><input type="email" name="email" required autocomplete="username"></label>`}
-    <label class="field"><span>${esc(t("master_password"))}</span><input type="password" name="password" required autocomplete="current-password"></label>
+    <label class="field"><span>${esc(t("master_password"))}</span>${secretInput("password")}</label>
     ${l.twoStep !== null && l.tab === "password" ? `<div class="msg info"><b>${esc(t("twostep_title"))}</b>${l.twoStep ? "<br>" + esc(l.twoStep) : ""}<br>${esc(t("twostep_email_hint"))}</div>
       <div class="row"><label class="field" style="flex:1"><span>${esc(t("twostep_method"))}</span><select name="twoStepMethod">
         ${["0", "1", "3"].map((m) => `<option value="${m}" ${l.method === m ? "selected" : ""}>${esc(t("method_" + m))}</option>`).join("")}</select></label>
@@ -684,7 +694,7 @@ function viewMerge() {
   const okN = j.log.filter((l) => l.ok).length;
   const errN = j.log.length - okN;
   let head;
-  if (j.running) head = `<div class="msg warn">${esc(t("merge_warn"))}</div>`;
+  if (j.running) head = `<div class="msg warn">${esc(t("merge_busy"))}</div>`;
   else if (j.cancelled) head = `<div class="msg warn">${esc(t("merge_cancelled", { d: j.done, n: j.total }))}</div>`;
   else head = `<div class="msg ${errN ? "warn" : "ok"}">${esc(t("merge_done", { ok: okN, err: errN }))}</div>`;
   return `<div class="panel"><h2>${esc(t("merge_title"))}</h2>${head}

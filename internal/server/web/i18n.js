@@ -104,6 +104,7 @@ const TEXTS = {
     pw_changed: "Password changed {d}",
     col_location: "Location",
     tip_location: "Personal vault or organization, then folder and collections",
+    merge_busy: "Please do not edit the vault in other Bitwarden apps meanwhile.",
   },
   de: {
     quit: "Beenden", logout: "Abmelden", lang_switch: "EN",
@@ -209,6 +210,7 @@ const TEXTS = {
     pw_changed: "Passwort geändert am {d}",
     col_location: "Ablage",
     tip_location: "Persönlicher Tresor oder Organisation, dazu Ordner und Sammlungen",
+    merge_busy: "Bitte in der Zeit den Tresor nicht in anderen Bitwarden-Apps bearbeiten.",
   },
 };
 
