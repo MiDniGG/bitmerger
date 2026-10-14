@@ -15,12 +15,12 @@ Bitwarden kann keine Einträge zusammenführen. Nach Jahren voller Importe, Brow
 
 Die Datei für dein System gibt es im [neuesten Release](https://github.com/MiDniGG/bitmerger/releases/latest):
 
-| System | Datei |
+| System | Download |
 |---|---|
-| macOS, Apple Silicon (M1, M2, M3 …) | `bitmerger-macos-apple-silicon` |
-| macOS, Intel | `bitmerger-macos-intel` |
-| Windows | `bitmerger-windows-x64.exe` |
-| Linux | `bitmerger-linux-x64` oder `bitmerger-linux-arm64` |
+| macOS, Apple Silicon (M1, M2, M3 …) | [`bitmerger-macos-apple-silicon`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-macos-apple-silicon) |
+| macOS, Intel | [`bitmerger-macos-intel`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-macos-intel) |
+| Windows | [`bitmerger-windows-x64.exe`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-windows-x64.exe) |
+| Linux | [`bitmerger-linux-x64`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-linux-x64) oder [`bitmerger-linux-arm64`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-linux-arm64) |
 
 Die Dateien sind noch nicht signiert, dein System fragt deshalb einmal nach:
 

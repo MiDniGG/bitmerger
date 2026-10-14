@@ -15,12 +15,12 @@ Bitwarden has no merge function. After years of imports, browser saves and share
 
 Get the file for your system from the [latest release](https://github.com/MiDniGG/bitmerger/releases/latest):
 
-| System | File |
+| System | Download |
 |---|---|
-| macOS, Apple Silicon (M1, M2, M3 …) | `bitmerger-macos-apple-silicon` |
-| macOS, Intel | `bitmerger-macos-intel` |
-| Windows | `bitmerger-windows-x64.exe` |
-| Linux | `bitmerger-linux-x64` or `bitmerger-linux-arm64` |
+| macOS, Apple Silicon (M1, M2, M3 …) | [`bitmerger-macos-apple-silicon`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-macos-apple-silicon) |
+| macOS, Intel | [`bitmerger-macos-intel`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-macos-intel) |
+| Windows | [`bitmerger-windows-x64.exe`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-windows-x64.exe) |
+| Linux | [`bitmerger-linux-x64`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-linux-x64) or [`bitmerger-linux-arm64`](https://github.com/MiDniGG/bitmerger/releases/latest/download/bitmerger-linux-arm64) |
 
 The files are not code-signed yet, so your system asks once:
 
