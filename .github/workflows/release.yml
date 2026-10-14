@@ -20,4 +20,5 @@ jobs:
         run: |
           pre=""
           case "${GITHUB_REF_NAME}" in *-*) pre="--prerelease" ;; esac
-          gh release create "${GITHUB_REF_NAME}" dist/* $pre --title "BitMerger ${GITHUB_REF_NAME}" --notes-file .github/release-notes.md
+          sed -e "s#REPO#${GITHUB_REPOSITORY}#g" -e "s#TAG#${GITHUB_REF_NAME}#g" .github/release-notes.md > notes.md
+          gh release create "${GITHUB_REF_NAME}" dist/* $pre --title "BitMerger ${GITHUB_REF_NAME}" --notes-file notes.md
