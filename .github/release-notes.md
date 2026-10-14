@@ -10,3 +10,5 @@ Download the file for your system, start it, and BitMerger opens in your browser
 
 The binaries are not signed yet. See the [README](https://github.com/REPO#readme) for the one-time "open anyway" step.
 [SHA256SUMS](https://github.com/REPO/releases/download/TAG/SHA256SUMS) lets you verify the downloads.
+Every file also has a build provenance attestation proving it was built from this repository by GitHub Actions:
+`gh attestation verify bitmerger-linux-x64 --repo REPO`

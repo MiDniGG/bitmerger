@@ -28,6 +28,8 @@ Die Dateien sind noch nicht signiert, dein System fragt deshalb einmal nach:
 - **Windows:** *Weitere Informationen → Trotzdem ausführen*.
 - **Linux:** `chmod +x bitmerger-linux-* && ./bitmerger-linux-*`
 
+Ob eine Datei wirklich aus diesem Repository von GitHub Actions gebaut wurde, prüfst du mit der [GitHub CLI](https://cli.github.com) über die Herkunftsbestätigung (alle Releases nach v1.0.0): `gh attestation verify bitmerger-linux-x64 --repo MiDniGG/bitmerger`. Die Prüfsummen stehen in [`SHA256SUMS`](https://github.com/MiDniGG/bitmerger/releases/latest/download/SHA256SUMS).
+
 Solange BitMerger läuft, bleibt ein kleines Fenster offen, und der Browser zeigt die Oberfläche. Ohne Tresor ausprobieren: mit `--demo` starten.
 
 Beim ersten Start lädt BitMerger die offizielle Bitwarden-CLI (etwa 45 MB) von [Bitwardens GitHub-Releases](https://github.com/bitwarden/clients/releases), prüft sie gegen eine fest hinterlegte SHA-256-Prüfsumme und legt sie im eigenen Cache-Ordner ab. Am System wird nichts installiert, eine vorhandene Bitwarden-CLI bleibt unberührt.

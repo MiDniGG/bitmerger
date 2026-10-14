@@ -28,6 +28,8 @@ The files are not code-signed yet, so your system asks once:
 - **Windows:** *More info → Run anyway*.
 - **Linux:** `chmod +x bitmerger-linux-* && ./bitmerger-linux-*`
 
+To check that a download was built from this repository by GitHub Actions, verify its build provenance with the [GitHub CLI](https://cli.github.com) (all releases after v1.0.0): `gh attestation verify bitmerger-linux-x64 --repo MiDniGG/bitmerger`. [`SHA256SUMS`](https://github.com/MiDniGG/bitmerger/releases/latest/download/SHA256SUMS) lists the checksums.
+
 A small window stays open while BitMerger runs, and your browser opens the interface. Try it without a vault: start with `--demo`.
 
 On first start BitMerger downloads the official Bitwarden CLI (about 45 MB) from [Bitwarden's GitHub releases](https://github.com/bitwarden/clients/releases), checks it against a pinned SHA-256 checksum and keeps it in BitMerger's own cache folder. Nothing is installed system-wide, and an existing Bitwarden CLI setup is not touched.
